@@ -317,6 +317,9 @@ function renderPayPalPackages() {
   ];
 // ===== PayPal Start (Phase 8.2.3.3) =====
 function startPayPalBuy(packageId) {
+  console.log("startPayPalBuy packageId=", packageId);
+
+
       // Immer zuerst ALLES schließen, damit nie 2 PayPal-Auswahlen gleichzeitig offen sind
   resetPayPalUI();
 
@@ -859,6 +862,10 @@ const subtitle = CHARACTERS[state.character].subtitle;
 
       </div>
     `).join("");
+    // Auto-Scroll: immer die neuesten Nachrichten sichtbar machen
+    requestAnimationFrame(() => {
+      msgList.scrollTop = msgList.scrollHeight;
+    });
 
 
     // Input logic
@@ -1088,7 +1095,20 @@ async function stopVoiceFlow() {
         render();
         return;
       }
-      throw new Error("STT_FAILED");
+      const detail =
+  sttJson?.detail ||
+  sttJson?.error ||
+  sttJson?.message ||
+  `HTTP_${sttRes.status}`;
+
+console.error("STT failed:", sttRes.status, sttJson);
+alert(`STT Fehler: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
+
+
+await syncStatus();
+render();
+return;
+
     }
 
     const transcript = (sttJson.text || "").trim();
