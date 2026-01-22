@@ -863,9 +863,13 @@ const subtitle = CHARACTERS[state.character].subtitle;
       </div>
     `).join("");
     // Auto-Scroll: immer die neuesten Nachrichten sichtbar machen
-    requestAnimationFrame(() => {
-      msgList.scrollTop = msgList.scrollHeight;
-    });
+requestAnimationFrame(() => {
+  const last = msgList.lastElementChild;
+  if (last) {
+    last.scrollIntoView({ behavior: "auto", block: "end" });
+  }
+});
+
 
 
     // Input logic
