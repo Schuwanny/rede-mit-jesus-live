@@ -856,6 +856,36 @@ const subtitle = CHARACTERS[state.character].subtitle;
 
     // Render messages
     const msgList = document.getElementById("msgList");
+    // Layout-Fix: nur msgList scrollt, Input bleibt sichtbar
+const chatWrap = document.querySelector(".chat-wrap");
+const chatInputBar = document.querySelector(".chat-input");
+
+if (chatWrap && msgList && !chatWrap.dataset.layoutInit) {
+
+  // chatWrap als "Viewport" für den Chat nutzen
+  chatWrap.style.display = "flex";
+  chatWrap.style.flexDirection = "column";
+  chatWrap.style.overflow = "hidden";
+
+  // Höhe dynamisch: ab Oberkante chatWrap bis zum Viewport-Ende
+  const top = chatWrap.getBoundingClientRect().top;
+  chatWrap.style.height = Math.max(200, window.innerHeight - top - 8) + "px";
+
+  // msgList wird der scrollbare Bereich
+  msgList.style.flex = "1 1 auto";
+  msgList.style.overflowY = "auto";
+  msgList.style.webkitOverflowScrolling = "touch";
+    chatWrap.dataset.layoutInit = "1";
+
+}
+
+if (chatInputBar) {
+  chatInputBar.style.flex = "0 0 auto";
+  chatInputBar.style.position = "sticky";
+  chatInputBar.style.bottom = "0";
+  chatInputBar.style.zIndex = "5";
+}
+
     msgList.innerHTML = state.messages.map(m => `
       <div class="msg ${m.role === "user" ? "user" : "bot"}">
         ${escapeHtml(m.text)}
