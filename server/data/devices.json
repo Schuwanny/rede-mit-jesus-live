@@ -1,0 +1,30 @@
+{
+  "8e9ca612-a53b-4d62-a205-d3202a75a340": {
+    "credits": 0,
+    "dailyTextUsed": 0,
+    "dailyVoiceUsed": 0,
+    "dailySttUsed": 0,
+    "dailyDate": "2026-01-13"
+  },
+  "ec694000-bb4d-4da8-844a-a3b61af95daf": {
+    "credits": 0,
+    "dailyTextUsed": 0,
+    "dailyVoiceUsed": 0,
+    "dailySttUsed": 0,
+    "dailyDate": "2026-01-13"
+  },
+  "55e177f6-3e5e-43b8-9ccc-f4fd5ced886f": {
+    "credits": 0,
+    "dailyTextUsed": 0,
+    "dailyVoiceUsed": 0,
+    "dailySttUsed": 0,
+    "dailyDate": "2026-01-13"
+  },
+  "2caf5605-931f-4741-b3d8-6c655d55c283": {
+    "credits": 5300,
+    "dailyTextUsed": 2,
+    "dailyVoiceUsed": 1,
+    "dailySttUsed": 18,
+    "dailyDate": "2026-01-22"
+  }
+}

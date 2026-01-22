@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de" data-lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rede mit Jesus</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+
+<body class="rmj-home">
+
+  <!-- App Root (wird von main.js gefüllt) -->
+  <div id="app"></div>
+
+  <!-- Legal Footer (NUR Home per CSS steuern) -->
+  <footer class="legal-footer">
+  <a href="/legal/impressum.html" target="_blank" rel="noopener" data-i18n="legal_imprint">Impressum</a>
+  <span>·</span>
+  <a href="/legal/datenschutz.html" target="_blank" rel="noopener" data-i18n="legal_privacy">Datenschutz</a>
+  <span>·</span>
+  <a href="/legal/agb.html" target="_blank" rel="noopener" data-i18n="legal_terms">AGB</a>
+  <span>·</span>
+  <a href="/legal/about.html" target="_blank" rel="noopener" data-i18n="legal_about">Über die App</a>
+  <span>·</span>
+  <a href="/legal/verantwortung.html" target="_blank" rel="noopener" data-i18n="legal_responsibility">Verantwortung</a>
+</footer>
+
+
+  <!-- Recording Overlay (muss im DOM bleiben) -->
+  <div id="recordingOverlay">
+    <div id="pttHint">
+      <div id="pttArrow">↑</div>
+      <div id="pttText" data-i18n="ptt_release_send">Loslassen zum Senden</div>
+
+    </div>
+  </div>
+
+  <!-- PayPal SDK (muss VOR main.js geladen sein, wenn main.js paypal nutzt) -->
+  <script src="https://www.paypal.com/sdk/js?client-id=AawNCz4ev5oSU9Kl8GY5ldKRQ75izL7uJLmWBu8--doaIaS_WDbWEuvPQoRQUjOte5JBlpL74-ao5P2R&currency=EUR&intent=capture&components=buttons"></script>
+
+  <!-- App -->
+  <script type="module" src="/js/main.js"></script>
+<!-- Legal / AI Notice (first launch only) -->
+<div id="legal-modal" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+">
+  <div style="
+    max-width:420px;
+    margin:20px;
+    background:#111;
+    border-radius:16px;
+    padding:20px;
+    color:#fff;
+    font-size:14px;
+    line-height:1.5;
+    text-align:center;
+  ">
+    <h3 style="margin-top:0;">Hinweis</h3>
+
+    <p>
+      Diese App nutzt <strong>Künstliche Intelligenz</strong>.<br>
+      Die Antworten stellen <strong>keine echte religiöse, medizinische
+      oder psychologische Beratung</strong> dar.
+    </p>
+
+    <p style="opacity:0.85;">
+      Sie ersetzen kein Gespräch mit realen Personen oder Fachstellen.
+    </p>
+
+    <button id="legal-accept" style="
+      margin-top:12px;
+      padding:10px 16px;
+      border-radius:10px;
+      border:none;
+      background:#2b6cff;
+      color:white;
+      font-size:14px;
+      cursor:pointer;
+    ">
+      Verstanden
+    </button>
+  </div>
+</div>
+<script>
+(function () {
+  try {
+    const accepted = localStorage.getItem("legalAccepted");
+    const modal = document.getElementById("legal-modal");
+    const btn = document.getElementById("legal-accept");
+
+    if (!accepted && modal) {
+      modal.style.display = "flex";
+    }
+
+    if (btn) {
+      btn.addEventListener("click", () => {
+        localStorage.setItem("legalAccepted", "true");
+        modal.style.display = "none";
+      });
+    }
+  } catch (e) {
+    console.warn("Legal modal error:", e);
+  }
+})();
+</script>
+
+</body>
+</html>
