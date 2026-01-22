@@ -36,7 +36,52 @@
   </div>
 
   <!-- PayPal SDK (muss VOR main.js geladen sein, wenn main.js paypal nutzt) -->
-  <script src="https://www.paypal.com/sdk/js?client-id=AawNCz4ev5oSU9Kl8GY5ldKRQ75izL7uJLmWBu8--doaIaS_WDbWEuvPQoRQUjOte5JBlpL74-ao5P2R&currency=EUR&intent=capture&components=buttons"></script>
+   <script>
+(async () => {
+  try {
+    const res = await fetch("/api/paypal-config");
+    const { clientId, env } = await res.json();
+
+    const base =
+      env === "live"
+        ? "https://www.paypal.com/sdk/js"
+        : "https://www.sandbox.paypal.com/sdk/js";
+
+    const s = document.createElement("script");
+    s.src = `${base}?client-id=${encodeURIComponent(clientId)}&currency=EUR&intent=capture&components=buttons`;
+    s.async = true;
+
+    s.onload = () => console.log("[PayPal] SDK loaded");
+    s.onerror = (e) => console.error("[PayPal] SDK load error", e);
+
+    document.head.appendChild(s);
+  } catch (e) {
+    console.error("[PayPal] SDK load failed", e);
+  }
+})();
+</script>
+
+  <script>
+(async () => {
+  try {
+    const res = await fetch("/api/paypal-config");
+    const { clientId, env } = await res.json();
+
+    const src =
+      env === "live"
+        ? "https://www.paypal.com/sdk/js"
+        : "https://www.sandbox.paypal.com/sdk/js";
+
+    const script = document.createElement("script");
+    script.src = `${src}?client-id=${clientId}&currency=EUR&intent=capture&components=buttons`;
+    script.async = true;
+    document.head.appendChild(script);
+  } catch (e) {
+    console.error("PayPal SDK load failed:", e);
+  }
+})();
+</script>
+
 
   <!-- App -->
   <script type="module" src="/js/main.js"></script>

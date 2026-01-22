@@ -21,10 +21,10 @@
     "dailyDate": "2026-01-13"
   },
   "2caf5605-931f-4741-b3d8-6c655d55c283": {
-    "credits": 5300,
-    "dailyTextUsed": 2,
+    "credits": 15150,
+    "dailyTextUsed": 5,
     "dailyVoiceUsed": 1,
-    "dailySttUsed": 18,
+    "dailySttUsed": 24,
     "dailyDate": "2026-01-22"
   }
 }

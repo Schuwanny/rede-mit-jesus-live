@@ -511,6 +511,11 @@ app.get("/api/status", (req, res) => {
     status: statusPayload(loaded.data)
   });
 });
+app.get("/api/paypal-config", (req, res) => {
+  const env = (process.env.PAYPAL_ENV || "sandbox").toLowerCase();
+  const clientId = process.env.PAYPAL_CLIENT_ID || "";
+  res.json({ env, clientId });
+});
 
 // ===== Uploads (Audio) =====
 const uploadsDir = path.join(publicDir, "uploads");
