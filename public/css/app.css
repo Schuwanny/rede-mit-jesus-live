@@ -1004,3 +1004,41 @@ body.recording.rmj-home{
     radial-gradient(900px 700px at 50% 110%, rgba(255,255,255,.06), transparent 60%),
     linear-gradient(180deg, var(--rmj-bg0), var(--rmj-bg1)) !important;
 }
+/* =========================================================
+   CHAT SCROLL FIX (Sticky Header + Sticky Input)
+   NUR ANHÄNGEN – lässt sich jederzeit rückgängig machen
+   ========================================================= */
+body.rmj-chat #app{
+  min-height: 100svh;
+}
+
+/* Chat als "Viewport": Seite scrollt nicht mehr, nur die Liste */
+body.rmj-chat .chat-wrap{
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* Header bleibt oben stehen */
+body.rmj-chat .chat-top{
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Nur Nachrichtenbereich scrollt */
+body.rmj-chat .msg-list{
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Input bleibt unten stehen */
+body.rmj-chat .chat-input{
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+
+  /* kleines Polster, damit es "app-like" wirkt */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
