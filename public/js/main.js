@@ -1,6 +1,15 @@
 import { CHARACTERS } from "./characters.js";
 import { startRecording, stopRecording } from "./audio/recorder.js";
 function rmjShowDebug(text) {
+  // Debug-Overlay NUR anzeigen, wenn explizit aktiviert:
+  // - URL enthält ?debug=1   (oder &debug=1)
+  // - oder localStorage: rmj_debug = "1"
+  const enabled =
+    (new URLSearchParams(location.search).get("debug") === "1") ||
+    (localStorage.getItem("rmj_debug") === "1");
+
+  if (!enabled) return;
+
   try {
     let el = document.getElementById("rmjDebugBox");
     if (!el) {
@@ -13,7 +22,7 @@ function rmjShowDebug(text) {
       el.style.maxHeight = "45vh";
       el.style.overflow = "auto";
       el.style.zIndex = "999999";
-      el.style.pointerEvents = "none";
+      el.style.pointerEvents = "none"; // blockiert nichts mehr!
       el.style.background = "rgba(0,0,0,0.85)";
       el.style.color = "white";
       el.style.padding = "10px";
@@ -24,15 +33,16 @@ function rmjShowDebug(text) {
       el.style.webkitUserSelect = "text";
       el.style.border = "1px solid rgba(255,255,255,0.15)";
       el.style.boxShadow = "0 10px 30px rgba(0,0,0,0.4)";
-      el.addEventListener("click", () => (el.style.display = "none"));
       document.body.appendChild(el);
     }
+
     el.textContent = String(text || "");
     el.style.display = "block";
   } catch (e) {
     // not fatal
   }
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
     // ========= API BASE (Web vs. Capacitor Native) =========
