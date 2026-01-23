@@ -35,7 +35,8 @@ function rmjShowDebug(text) {
 
 document.addEventListener("DOMContentLoaded", () => {
     // ========= API BASE (Web vs. Capacitor Native) =========
- const IS_CAPACITOR = !!window.Capacitor;
+ const IS_CAPACITOR = !!window.Capacitor || (location.hostname === "localhost" && location.protocol === "https:");
+
 
 const API_ORIGIN = IS_CAPACITOR
   ? "https://rede-mit-jesus-live-production.up.railway.app"
@@ -44,9 +45,27 @@ console.log("[RMJ] IS_CAPACITOR =", IS_CAPACITOR);
 console.log("[RMJ] API_ORIGIN =", API_ORIGIN);
 
 function apiUrl(path) {
+  // 1) Path normalisieren
+  if (!path) path = "/";
   if (!path.startsWith("/")) path = "/" + path;
-  return API_ORIGIN + path;
+
+  // 2) Base normalisieren (damit es NIE wieder ohne https:// passieren kann)
+  let base = (API_ORIGIN || "").trim();
+
+  // Falls base z.B. "rede-mit-jesus-live-production.up.railway.app" ist -> https:// davor
+  if (base && !/^https?:\/\//i.test(base)) {
+    base = "https://" + base;
+  }
+
+  // Trailing Slash entfernen, sonst gibt's //api/...
+  base = base.replace(/\/+$/, "");
+
+  // 3) Wenn keine Base (Browser same-origin), nur den Path zurückgeben
+  if (!base) return path;
+
+  return base + path;
 }
+
 
 async function apiFetch(path, options = {}) {
   return fetch(apiUrl(path), options);
@@ -202,21 +221,8 @@ async function apiFetch(path, options = {}) {
     return id;
   }
   const deviceId = getDeviceId();
-// ===== API Base für Capacitor (Android/iOS) =====
-const CAP_PLATFORM = window.Capacitor?.getPlatform?.();
-const IS_NATIVE_APP = CAP_PLATFORM === "android" || CAP_PLATFORM === "ios";
+// (API Base: entfernt – wir nutzen ausschließlich API_ORIGIN + apiFetch oben)
 
-// WICHTIG: hier DEINE Railway Domain eintragen (mit https://)
-const API_BASE_URL = IS_NATIVE_APP ? "rede-mit-jesus-live-production.up.railway.app" : "";
-
-function apiUrl(path) {
-  return API_BASE_URL ? (API_BASE_URL + path) : path;
-}
-
-function apiFetch(path, options) {
-  return fetch(apiUrl(path), options);
-}
-// ==============================================
 
   async function syncStatus() {
   try {
