@@ -32,13 +32,25 @@ export async function startRecording() {
 
   // stream holen
   try {
-    streamRef = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
+    try {
+  streamRef = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }
+  });
+} catch (err) {
+  // Android/WebView Fallback: so simpel wie möglich
+  try {
+    streamRef = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err2) {
+    const e = new Error(`${err2?.name || err?.name || "GETUSERMEDIA_FAILED"}: ${(err2?.message || err?.message || "")}`.trim());
+    e.name = err2?.name || err?.name || "GETUSERMEDIA_FAILED";
+    throw e;
+  }
+}
+
   } catch (err) {
     // NotAllowedError / NotFoundError / NotReadableError etc.
     const e = new Error(`${err?.name || "GETUSERMEDIA_FAILED"}: ${err?.message || ""}`.trim());
