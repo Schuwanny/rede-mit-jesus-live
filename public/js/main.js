@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
 const API_ORIGIN = IS_CAPACITOR
   ? "https://rede-mit-jesus-live-production.up.railway.app"
   : "";
+console.log("[RMJ] IS_CAPACITOR =", IS_CAPACITOR);
+console.log("[RMJ] API_ORIGIN =", API_ORIGIN);
 
 function apiUrl(path) {
   if (!path.startsWith("/")) path = "/" + path;
@@ -1143,17 +1145,15 @@ const sttFd = new FormData();
 const ext2 = (blob && blob.type && blob.type.includes("ogg")) ? "ogg" : "webm";
 sttFd.append("audio", blob, `recording.${ext2}`);
 
-const sttRes = await fetch(
-  "https://rede-mit-jesus-live.up.railway.app/api/stt",
-  {
-    method: "POST",
-    headers: {
-      "x-device-id": deviceId,
-      "x-lang": state.lang
-    },
-    body: sttFd
-  }
-);
+const sttRes = await apiFetch("/api/stt", {
+  method: "POST",
+  headers: {
+    "x-device-id": deviceId,
+    "x-lang": state.lang
+  },
+  body: sttFd
+});
+
 if (!sttRes.ok) {
   const errText = await sttRes.text().catch(() => "");
   rmjShowDebug(
