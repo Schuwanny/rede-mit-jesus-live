@@ -1042,3 +1042,52 @@ body.rmj-chat .chat-input{
   /* kleines Polster, damit es "app-like" wirkt */
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+/* =========================================================
+   CHAT SCROLL FIX v2 (erzwingt: nur msg-list scrollt)
+   NUR ANHÄNGEN – zum Rückgängig: Block löschen
+   ========================================================= */
+
+/* Im Chat darf die Seite NICHT scrollen */
+body.rmj-chat{
+  overflow: hidden !important;
+}
+
+/* #app ist im Chat der Viewport: kein Padding, nicht zentrieren */
+body.rmj-chat #app{
+  height: 100svh !important;
+  padding: 0 !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+
+/* Chat-Wrapper füllt den Screen */
+body.rmj-chat .chat-wrap{
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Header bleibt oben */
+body.rmj-chat .chat-top{
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+}
+
+/* NUR die Message-Liste scrollt (Flex-Scroll braucht min-height:0) */
+body.rmj-chat .msg-list{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Input bleibt unten */
+body.rmj-chat .chat-input{
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 30 !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
