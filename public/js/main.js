@@ -1,3 +1,6 @@
+  const DEBUG = location.search.includes("debug=1") || localStorage.getItem("rmj_debug") === "1";
+  if (!DEBUG) return;
+
 import { CHARACTERS } from "./characters.js";
 import { startRecording, stopRecording } from "./audio/recorder.js";
 function rmjShowDebug(text) {
@@ -13,6 +16,7 @@ function rmjShowDebug(text) {
       el.style.maxHeight = "45vh";
       el.style.overflow = "auto";
       el.style.zIndex = "999999";
+      el.style.pointerEvents = "none";
       el.style.background = "rgba(0,0,0,0.85)";
       el.style.color = "white";
       el.style.padding = "10px";
