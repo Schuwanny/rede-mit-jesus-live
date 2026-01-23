@@ -1,6 +1,3 @@
-  const DEBUG = location.search.includes("debug=1") || localStorage.getItem("rmj_debug") === "1";
-  if (!DEBUG) return;
-
 import { CHARACTERS } from "./characters.js";
 import { startRecording, stopRecording } from "./audio/recorder.js";
 function rmjShowDebug(text) {
