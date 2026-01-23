@@ -35,10 +35,17 @@ function rmjShowDebug(text) {
 
 document.addEventListener("DOMContentLoaded", () => {
     // ========= API BASE (Web vs. Capacitor Native) =========
- const IS_CAPACITOR = !!window.Capacitor || (location.hostname === "localhost" && location.protocol === "https:");
+ const IS_CAPACITOR = Boolean(
+  // Android/iOS WebView liefert i.d.R. window.Capacitor + Native-Flag.
+  window.Capacitor?.isNativePlatform?.() ||
+  // Fallback für WebViews mit speziellen Protokollen (nie als "Web" behandeln).
+  ["capacitor:", "file:", "ionic:"].includes(location.protocol)
+);
+
 
 
 const API_ORIGIN = IS_CAPACITOR
+ // In WebViews niemals same-origin/localhost/file:// verwenden, immer HTTPS-Backend.
   ? "https://rede-mit-jesus-live-production.up.railway.app"
   : "";
 console.log("[RMJ] IS_CAPACITOR =", IS_CAPACITOR);
@@ -56,6 +63,10 @@ function apiUrl(path) {
   if (base && !/^https?:\/\//i.test(base)) {
     base = "https://" + base;
   }
+// In Capacitor/WebView niemals localhost/file:// zulassen (Android cleartext + file:// CORS).
+  if (IS_CAPACITOR && /^(file:|https?:\/\/localhost\b|https?:\/\/127\.0\.0\.1\b)/i.test(base)) {
+    base = "https://rede-mit-jesus-live-production.up.railway.app";
+  }
 
   // Trailing Slash entfernen, sonst gibt's //api/...
   base = base.replace(/\/+$/, "");
@@ -67,8 +78,23 @@ function apiUrl(path) {
 }
 
 
+
 async function apiFetch(path, options = {}) {
-  return fetch(apiUrl(path), options);
+  const finalOptions = { ...options };
+  // Android WebView: explizites CORS + stabile Header-Behandlung.
+  if (IS_CAPACITOR && !finalOptions.mode) finalOptions.mode = "cors";
+  const headers = new Headers(finalOptions.headers || {});
+  // Standard-Accept hilft bei JSON-Antworten in WebViews.
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  // Content-Type nur setzen, wenn kein FormData gesendet wird.
+  if (finalOptions.body && !(finalOptions.body instanceof FormData)) {
+    if (!headers.has("Content-Type") && typeof finalOptions.body === "string") {
+      headers.set("Content-Type", "application/json");
+    }
+  }
+  finalOptions.headers = headers;
+  return fetch(apiUrl(path), finalOptions);
+
 }
 
 
