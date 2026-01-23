@@ -1,7 +1,57 @@
 import { CHARACTERS } from "./characters.js";
 import { startRecording, stopRecording } from "./audio/recorder.js";
+function rmjShowDebug(text) {
+  try {
+    let el = document.getElementById("rmjDebugBox");
+    if (!el) {
+      el = document.createElement("pre");
+      el.id = "rmjDebugBox";
+      el.style.position = "fixed";
+      el.style.left = "10px";
+      el.style.right = "10px";
+      el.style.bottom = "10px";
+      el.style.maxHeight = "45vh";
+      el.style.overflow = "auto";
+      el.style.zIndex = "999999";
+      el.style.background = "rgba(0,0,0,0.85)";
+      el.style.color = "white";
+      el.style.padding = "10px";
+      el.style.borderRadius = "12px";
+      el.style.fontSize = "12px";
+      el.style.whiteSpace = "pre-wrap";
+      el.style.userSelect = "text";
+      el.style.webkitUserSelect = "text";
+      el.style.border = "1px solid rgba(255,255,255,0.15)";
+      el.style.boxShadow = "0 10px 30px rgba(0,0,0,0.4)";
+      el.addEventListener("click", () => (el.style.display = "none"));
+      document.body.appendChild(el);
+    }
+    el.textContent = String(text || "");
+    el.style.display = "block";
+  } catch (e) {
+    // not fatal
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
+    // ========= API BASE (Web vs. Capacitor Native) =========
+ const IS_CAPACITOR = !!window.Capacitor;
+
+const API_ORIGIN = IS_CAPACITOR
+  ? "https://rede-mit-jesus-live-production.up.railway.app"
+  : "";
+
+function apiUrl(path) {
+  if (!path.startsWith("/")) path = "/" + path;
+  return API_ORIGIN + path;
+}
+
+async function apiFetch(path, options = {}) {
+  return fetch(apiUrl(path), options);
+}
+
+
+
     // ===== i18n (DE/EN) =====
   const LANG_KEY = "rmj_lang";
   function getLang() {
@@ -150,10 +200,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return id;
   }
   const deviceId = getDeviceId();
+// ===== API Base für Capacitor (Android/iOS) =====
+const CAP_PLATFORM = window.Capacitor?.getPlatform?.();
+const IS_NATIVE_APP = CAP_PLATFORM === "android" || CAP_PLATFORM === "ios";
+
+// WICHTIG: hier DEINE Railway Domain eintragen (mit https://)
+const API_BASE_URL = IS_NATIVE_APP ? "rede-mit-jesus-live-production.up.railway.app" : "";
+
+function apiUrl(path) {
+  return API_BASE_URL ? (API_BASE_URL + path) : path;
+}
+
+function apiFetch(path, options) {
+  return fetch(apiUrl(path), options);
+}
+// ==============================================
 
   async function syncStatus() {
   try {
-    const r = await fetch("/api/status", {
+    const r = await apiFetch("/api/status", {
       headers: { "x-device-id": deviceId }
     });
 
@@ -409,7 +474,7 @@ btn.style.display = "none";
 
       // Capture passiert serverseitig in Phase 8.2.3 (oder jetzt schon über confirm)
       // Wir rufen unseren Server an, der Credits gutschreibt
-      const r = await fetch("/api/paypal/confirm", {
+      const r = await apiFetch("/api/paypal/confirm", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -856,36 +921,7 @@ const subtitle = CHARACTERS[state.character].subtitle;
 
     // Render messages
     const msgList = document.getElementById("msgList");
-    // Layout-Fix: nur msgList scrollt, Input bleibt sichtbar
-const chatWrap = document.querySelector(".chat-wrap");
-const chatInputBar = document.querySelector(".chat-input");
-
-if (chatWrap && msgList && !chatWrap.dataset.layoutInit) {
-
-  // chatWrap als "Viewport" für den Chat nutzen
-  chatWrap.style.display = "flex";
-  chatWrap.style.flexDirection = "column";
-  chatWrap.style.overflow = "hidden";
-
-  // Höhe dynamisch: ab Oberkante chatWrap bis zum Viewport-Ende
-  const top = chatWrap.getBoundingClientRect().top;
-  chatWrap.style.height = Math.max(200, window.innerHeight - top - 8) + "px";
-
-  // msgList wird der scrollbare Bereich
-  msgList.style.flex = "1 1 auto";
-  msgList.style.overflowY = "auto";
-  msgList.style.webkitOverflowScrolling = "touch";
-    chatWrap.dataset.layoutInit = "1";
-
-}
-
-if (chatInputBar) {
-  chatInputBar.style.flex = "0 0 auto";
-  chatInputBar.style.position = "sticky";
-  chatInputBar.style.bottom = "0";
-  chatInputBar.style.zIndex = "5";
-}
-
+    
     msgList.innerHTML = state.messages.map(m => `
       <div class="msg ${m.role === "user" ? "user" : "bot"}">
         ${escapeHtml(m.text)}
@@ -1103,53 +1139,103 @@ async function stopVoiceFlow() {
     if (!blob || blob.size < 1500) return;
 
     // 2) STT: gleiche Aufnahme -> Text
-    const sttFd = new FormData();
-    const ext2 = (blob && blob.type && blob.type.includes("ogg")) ? "ogg" : "webm";
-    sttFd.append("audio", blob, `recording.${ext2}`);
+const sttFd = new FormData();
+const ext2 = (blob && blob.type && blob.type.includes("ogg")) ? "ogg" : "webm";
+sttFd.append("audio", blob, `recording.${ext2}`);
 
-    const sttRes = await fetch("/api/stt", {
-      method: "POST",
-      headers: {
-        "x-device-id": deviceId,
-        "x-lang": state.lang
-      },
-      body: sttFd
-    });
+const sttRes = await fetch(
+  "https://rede-mit-jesus-live.up.railway.app/api/stt",
+  {
+    method: "POST",
+    headers: {
+      "x-device-id": deviceId,
+      "x-lang": state.lang
+    },
+    body: sttFd
+  }
+);
+if (!sttRes.ok) {
+  const errText = await sttRes.text().catch(() => "");
+  rmjShowDebug(
+    [
+      "=== STT RESPONSE ERROR ===",
+      `status: ${sttRes.status}`,
+      `statusText: ${sttRes.statusText}`,
+      "response:",
+      errText
+    ].join("\n")
+  );
+  throw new Error("STT_REQUEST_FAILED");
+}
 
-    const sttJson = await sttRes.json().catch(() => ({}));
+rmjShowDebug(
+  [
+    "=== STT DEBUG ===",
+    `apiOrigin: ${API_ORIGIN || "(same-origin)"}`,
+    `sttUrl: ${apiUrl("/api/stt")}`,
+    `res.url: ${sttRes.url || "(no url)"}`,
+    `status: ${sttRes.status} ${sttRes.statusText || ""}`,
+    `content-type: ${sttRes.headers.get("content-type") || ""}`,
+    `blob.size: ${blob?.size ?? "?"}`,
+    `blob.type: ${blob?.type ?? "?"}`
+  ].join("\n")
+);
 
-    if (sttRes.ok && sttJson.ok) {
-      await syncStatus();
-    }
+// ===== DEBUG STT (Schritt 7.1) =====
+try {
+  console.log("[STT] blob", {
+    size: blob?.size,
+    type: blob?.type
+  });
+} catch (e) {
+  console.warn("[STT] blob log failed", e);
+}
 
-    if (!sttRes.ok || !sttJson.ok) {
-      if (sttRes.status === 402 && sttJson?.error === "NO_CREDITS_STT") {
-        openLimitModal(t("limit_voice"));
-        await syncStatus();
-        render();
-        return;
-      }
-      const detail =
-  sttJson?.detail ||
-  sttJson?.error ||
-  sttJson?.message ||
-  `HTTP_${sttRes.status}`;
+const sttContentType = sttRes.headers.get("content-type") || "";
+console.log("[STT] response", {
+  status: sttRes.status,
+  statusText: sttRes.statusText,
+  contentType: sttContentType
+});
 
-console.error("STT failed:", sttRes.status, sttJson);
-alert(`STT Fehler: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
+// JSON lesen (mit Fallback-Log, falls kein JSON zurückkommt)
+let sttJson = {};
+try {
+  sttJson = await sttRes.clone().json();
+} catch (e) {
+  console.warn("[STT] JSON parse failed:", e);
+  try {
+    const raw = await sttRes.clone().text();
+    console.warn("[STT] raw (first 600 chars):", String(raw || "").slice(0, 600));
+  } catch (e2) {
+    console.warn("[STT] raw text read failed:", e2);
+  }
+  sttJson = {};
+}
+
+console.log("[STT] json", sttJson);
+// ===== /DEBUG STT =====
 
 
-await syncStatus();
-render();
-return;
+if (!sttRes.ok) {
+  const detail = sttJson?.error || `HTTP_${sttRes.status}`;
+  throw new Error("stt_error: " + detail);
+}
 
-    }
 
-    const transcript = (sttJson.text || "").trim();
-    if (transcript) {
-      input.value = transcript;
-      await sendMessage(true);
-    }
+
+const transcript = (
+  sttJson.text ||
+  sttJson.transcript ||
+  sttJson.result ||
+  ""
+).trim();
+
+if (transcript) {
+  input.value = transcript;
+  await sendMessage(true);
+}
+
 
   } catch (err) {
     isRecording = false;
@@ -1233,7 +1319,7 @@ state.messages.push({ role: "bot", text: speakingText });
   
 
   try {
-    const r = await fetch("/api/chat", {
+    const r = await apiFetch("/api/chat", {
       method: "POST",
       headers: {
   "Content-Type": "application/json",
