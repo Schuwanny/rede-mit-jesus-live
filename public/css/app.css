@@ -68,6 +68,8 @@ body.rmj-chat{
   justify-content:space-between;
   gap:12px;
   padding:0 16px 12px;
+  flex-wrap: wrap;
+
 }
 
 .back-btn{
@@ -93,7 +95,8 @@ body.rmj-chat{
 .chat-status{
   font-size:12px;
   opacity:.65;
-  white-space:nowrap;
+  white-space: normal;
+
 }
 
 .msg-list{
