@@ -1,6 +1,10 @@
 *{box-sizing:border-box}
 /* Fallback: falls rmj-home/rmj-chat noch nicht gesetzt ist (sonst ist body weiß) */
 body{
+  html{
+  overflow-x: hidden;
+}
+
   overflow-x: hidden;
 
   margin:0;
@@ -142,20 +146,10 @@ body.rmj-chat{
   margin-top:12px;
   display:flex;
   gap:10px;
-}
-.chat-input input{
-  flex:1;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:18px;
-  padding:14px 14px;
-  background: rgba(255,255,255,.04);
-  box-shadow: none;
-  font-size:15px;
-  color: rgba(255,255,255,.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
+  width: 100%;
+max-width: 100%;
 
+}
 .chat-input input{
   flex:1;
   border:1px solid rgba(255,255,255,.10);
@@ -167,6 +161,7 @@ body.rmj-chat{
   color: rgba(255,255,255,.92);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  min-width: 0;
 }
 
 
