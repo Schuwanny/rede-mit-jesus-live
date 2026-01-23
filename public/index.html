@@ -36,10 +36,19 @@
   </div>
 
   <!-- PayPal SDK (muss VOR main.js geladen sein, wenn main.js paypal nutzt) -->
-   <script>
+<script>
 (async () => {
   try {
-    const res = await fetch("/api/paypal-config");
+    const IS_CAPACITOR =
+      (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) ||
+      location.protocol === "capacitor:" ||
+      location.protocol === "file:";
+
+    const API_ORIGIN = IS_CAPACITOR
+      ? "https://rede-mit-jesus-live-production.up.railway.app"
+      : "";
+
+    const res = await fetch(`${API_ORIGIN}/api/paypal-config`);
     const { clientId, env } = await res.json();
 
     const base =
@@ -61,29 +70,11 @@
 })();
 </script>
 
-  <script>
-(async () => {
-  try {
-    const res = await fetch("/api/paypal-config");
-    const { clientId, env } = await res.json();
-
-    const src =
-      env === "live"
-        ? "https://www.paypal.com/sdk/js"
-        : "https://www.sandbox.paypal.com/sdk/js";
-
-    const script = document.createElement("script");
-    script.src = `${src}?client-id=${clientId}&currency=EUR&intent=capture&components=buttons`;
-    script.async = true;
-    document.head.appendChild(script);
-  } catch (e) {
-    console.error("PayPal SDK load failed:", e);
-  }
-})();
-</script>
 
 
   <!-- App -->
+   <script src="capacitor.js"></script>
+
   <script type="module" src="/js/main.js"></script>
 <!-- Legal / AI Notice (first launch only) -->
 <div id="legal-modal" style="
