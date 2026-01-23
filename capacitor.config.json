@@ -1,5 +1,10 @@
 {
   "appId": "app.redemitjesus.app",
   "appName": "Rede mit Jesus",
-  "webDir": "public"
+  "webDir": "public",
+  "server": {
+    "allowNavigation": [
+      "rede-mit-jesus-live-production.up.railway.app"
+    ]
+  }
 }
