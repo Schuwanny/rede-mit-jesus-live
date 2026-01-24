@@ -107,26 +107,7 @@ async function apiFetch(path, options = {}) {
   }
   finalOptions.headers = headers;
   return fetch(apiUrl(path), finalOptions);
-
 }
-
-  // ===== LEGAL LINKS (Impressum / Datenschutz / AGB etc.) =====
-  document.querySelectorAll('a[href^="/legal/"]').forEach(link => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault(); // Browser-Navigation stoppen
-
-      const url = link.getAttribute("href");
-      const label = link.textContent?.trim() || "Rechtliches";
-
-      if (typeof openLegal === "function") {
-        openLegal(url, label);
-      } else {
-        // Fallback: normal öffnen, falls Modal fehlt
-        window.open(url, "_blank", "noopener");
-      }
-    });
-  });
-
 
     // ===== i18n (DE/EN) =====
   const LANG_KEY = "rmj_lang";
@@ -1506,86 +1487,49 @@ saveConversation();
     if (!modal || !frame || !closeBtn) return;
 
     function openLegal(url, label) {
-  modal.style.display = "block";                 // <-- HINZUFÜGEN
-  modal.setAttribute("aria-hidden", "false");
-  frame.src = url;
-  if (title) title.textContent = label || "Rechtliches";
-  history.pushState({ legalModal: true }, "");
-}
-
-
-    function closeLegal() {
-  modal.setAttribute("aria-hidden", "true");
-  modal.style.display = "none";          // Fallback, falls CSS nicht greift
-  frame.src = "about:blank";
-}
-closeLegal(); // beim Laden immer schließen
-
-  // Footer-Links abfangen (wichtig: preventDefault, sonst navigiert der Browser)
-  document.addEventListener("click", (e) => {
-    const a = e.target.closest('a[data-legal-open]');
-    if (!a) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const href = a.getAttribute("href");
-    const label = (a.textContent || "Rechtliches").trim();
-    openLegal(href, label);
-  }, true);
-
-    // Close-Button
-    closeBtn.addEventListener("click", () => {
-      if (history.state && history.state.legalModal) {
-        history.back();
-      } else {
-        closeLegal();
-      }
-    });
-
-    // Klick auf Backdrop
-    modal.querySelectorAll("[data-legal-close]").forEach(el => {
-      el.addEventListener("click", () => {
-        if (history.state && history.state.legalModal) {
-          history.back();
-        } else {
-          closeLegal();
-        }
-      });
-    });
-
-    // Footer-Links abfangen
-    const footer = document.querySelector("footer.legal-footer");
-    if (footer) {
-      footer.addEventListener("click", (e) => {
-        const a = e.target.closest("a[href]");
-        if (!a) return;
-
-        const href = a.getAttribute("href");
-        if (!href || !href.startsWith("/legal/")) return;
-
-        e.preventDefault();
-        openLegal(href, a.textContent?.trim());
-      });
+      modal.style.display = "block";
+      modal.setAttribute("aria-hidden", "false");
+      frame.src = url;
+      if (title) title.textContent = label || "Rechtliches";
     }
 
-    // Android / Browser Back
-    window.addEventListener("popstate", () => {
-      if (modal.getAttribute("aria-hidden") === "false") {
-        closeLegal();
-      }
+    function closeLegal() {
+      modal.setAttribute("aria-hidden", "true");
+      modal.style.display = "none";
+      frame.src = "about:blank";
+    }
+    closeLegal();
+
+    const legalLinks = [
+      { key: "impressum", url: "/legal/impressum.html", label: "Impressum" },
+      { key: "datenschutz", url: "/legal/datenschutz.html", label: "Datenschutz" },
+      { key: "agb", url: "/legal/agb.html", label: "AGB" },
+      { key: "about", url: "/legal/about.html", label: "Über die App" },
+      { key: "verantwortung", url: "/legal/verantwortung.html", label: "Verantwortung" }
+    ];
+
+    legalLinks.forEach(({ key, url, label }) => {
+      const link = document.querySelector(`[data-legal="${key}"]`);
+      if (!link) return;
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openLegal(url, link.textContent?.trim() || label);
+      });
     });
 
-    // ESC (Desktop)
+    closeBtn.addEventListener("click", closeLegal);
+
+    modal.querySelectorAll("[data-legal-close]").forEach(el => {
+      el.addEventListener("click", closeLegal);
+    });
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && modal.getAttribute("aria-hidden") === "false") {
-        if (history.state && history.state.legalModal) {
-          history.back();
-        } else {
-          closeLegal();
-        }
+        closeLegal();
       }
     });
   })();
+
 
 });
