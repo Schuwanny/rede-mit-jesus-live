@@ -1499,9 +1499,11 @@ saveConversation();
     }
 
     function closeLegal() {
-      modal.setAttribute("aria-hidden", "true");
-      frame.src = "about:blank";
-    }
+  modal.setAttribute("aria-hidden", "true");
+  modal.style.display = "none";          // Fallback, falls CSS nicht greift
+  frame.src = "about:blank";
+}
+
 
     // Close-Button
     closeBtn.addEventListener("click", () => {
