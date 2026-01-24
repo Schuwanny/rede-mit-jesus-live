@@ -1,6 +1,8 @@
 import { CHARACTERS } from "./characters.js";
 import { startRecording, stopRecording } from "./audio/recorder.js";
 function rmjShowDebug(text) {
+  return; // DEBUG endgültig deaktiviert
+
   // Debug-Overlay NUR anzeigen, wenn explizit aktiviert:
   // - URL enthält ?debug=1   (oder &debug=1)
   // - oder localStorage: rmj_debug = "1"
@@ -1478,4 +1480,81 @@ saveConversation();
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
+    // ===== LEGAL MODAL (AGB / Datenschutz / Impressum) =====
+  (function setupLegalModal() {
+    const modal = document.getElementById("legalModal");
+    const frame = document.getElementById("legalFrame");
+    const title = document.getElementById("legalModalTitle");
+    const closeBtn = document.getElementById("legalCloseBtn");
+
+    if (!modal || !frame || !closeBtn) return;
+
+    function openLegal(url, label) {
+      modal.setAttribute("aria-hidden", "false");
+      frame.src = url;
+      if (title) title.textContent = label || "Rechtliches";
+
+      // Android-Back sauber abfangen
+      history.pushState({ legalModal: true }, "");
+    }
+
+    function closeLegal() {
+      modal.setAttribute("aria-hidden", "true");
+      frame.src = "about:blank";
+    }
+
+    // Close-Button
+    closeBtn.addEventListener("click", () => {
+      if (history.state && history.state.legalModal) {
+        history.back();
+      } else {
+        closeLegal();
+      }
+    });
+
+    // Klick auf Backdrop
+    modal.querySelectorAll("[data-legal-close]").forEach(el => {
+      el.addEventListener("click", () => {
+        if (history.state && history.state.legalModal) {
+          history.back();
+        } else {
+          closeLegal();
+        }
+      });
+    });
+
+    // Footer-Links abfangen
+    const footer = document.querySelector("footer.legal-footer");
+    if (footer) {
+      footer.addEventListener("click", (e) => {
+        const a = e.target.closest("a[href]");
+        if (!a) return;
+
+        const href = a.getAttribute("href");
+        if (!href || !href.startsWith("/legal/")) return;
+
+        e.preventDefault();
+        openLegal(href, a.textContent?.trim());
+      });
+    }
+
+    // Android / Browser Back
+    window.addEventListener("popstate", () => {
+      if (modal.getAttribute("aria-hidden") === "false") {
+        closeLegal();
+      }
+    });
+
+    // ESC (Desktop)
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.getAttribute("aria-hidden") === "false") {
+        if (history.state && history.state.legalModal) {
+          history.back();
+        } else {
+          closeLegal();
+        }
+      }
+    });
+  })();
+
 });
