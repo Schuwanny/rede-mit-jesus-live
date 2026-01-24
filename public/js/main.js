@@ -1490,20 +1490,33 @@ saveConversation();
     if (!modal || !frame || !closeBtn) return;
 
     function openLegal(url, label) {
-      modal.setAttribute("aria-hidden", "false");
-      frame.src = url;
-      if (title) title.textContent = label || "Rechtliches";
+  modal.style.display = "block";                 // <-- HINZUFÜGEN
+  modal.setAttribute("aria-hidden", "false");
+  frame.src = url;
+  if (title) title.textContent = label || "Rechtliches";
+  history.pushState({ legalModal: true }, "");
+}
 
-      // Android-Back sauber abfangen
-      history.pushState({ legalModal: true }, "");
-    }
 
     function closeLegal() {
   modal.setAttribute("aria-hidden", "true");
   modal.style.display = "none";          // Fallback, falls CSS nicht greift
   frame.src = "about:blank";
 }
+closeLegal(); // beim Laden immer schließen
 
+  // Footer-Links abfangen (wichtig: preventDefault, sonst navigiert der Browser)
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('a[data-legal-open]');
+    if (!a) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const href = a.getAttribute("href");
+    const label = (a.textContent || "Rechtliches").trim();
+    openLegal(href, label);
+  }, true);
 
     // Close-Button
     closeBtn.addEventListener("click", () => {
