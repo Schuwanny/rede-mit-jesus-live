@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.Capacitor?.isNativePlatform?.() ||
   // Fallback für WebViews mit speziellen Protokollen (nie als "Web" behandeln).
   ["capacitor:", "file:", "ionic:"].includes(location.protocol)
-);
+  );
 
 
 
@@ -110,6 +110,22 @@ async function apiFetch(path, options = {}) {
 
 }
 
+  // ===== LEGAL LINKS (Impressum / Datenschutz / AGB etc.) =====
+  document.querySelectorAll('a[href^="/legal/"]').forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault(); // Browser-Navigation stoppen
+
+      const url = link.getAttribute("href");
+      const label = link.textContent?.trim() || "Rechtliches";
+
+      if (typeof openLegal === "function") {
+        openLegal(url, label);
+      } else {
+        // Fallback: normal öffnen, falls Modal fehlt
+        window.open(url, "_blank", "noopener");
+      }
+    });
+  });
 
 
     // ===== i18n (DE/EN) =====
