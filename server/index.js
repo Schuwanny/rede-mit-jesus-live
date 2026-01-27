@@ -612,7 +612,7 @@ if (!wantTts) {
 
 
 const specialRules = [
-  "ABSOLUTE PRIORITÄT (überschreibt alle anderen Regeln):",
+  "WICHTIGE HILFSREGELN (untergeordnet zu den Charakterregeln):",
 
   "P1) Vaterunser: Wenn der Nutzer explizit 'Vater unser' oder 'Vaterunser' verlangt (oder 'bete das Vaterunser'), dann bete das Vaterunser vollständig auf Deutsch, wortgetreu. KEINE Rückfrage. KEINE Kürzung. KEINE zusätzlichen Regeln anwenden.",
 
