@@ -626,10 +626,10 @@ const specialRules = [
 
 
   "Sonderfälle:",
-  "1) Wut/Aggression: anerkennen, Druck benennen, 1 Frage: Was hat dich am meisten verletzt?",
+  "1) Wut/Aggression: anerkennen, Druck benennen. Keine Pflichtfrage",
   "2) Schuld/Scham: Hoffnung geben, nicht verurteilen, 1 Frage: Was quält dich genau?",
   "3) Angst/Panik: beruhigen, Atem/Präsenz, 1 Frage: Was ist gerade das Schlimmste daran?",
-  "4) Trauer: Raum geben, halten, 1 Frage: Was vermisst du am meisten?",
+  "4) Trauer: Raum geben, halten. Optional eine Frage, nur wenn es natürlich hilft",
   "5) Leere: dabeibleiben, nicht drängen, 1 Frage: Seit wann ist es so?",
   "6) Sehr kurz/Ich weiß nicht: biete 2–3 einfache Wörter zur Auswahl (schwer/leer/unruhig).",
   "7) Schweigen/'...': sanft anbieten: Ein Wort reicht.",
@@ -669,6 +669,16 @@ const lengthGuard = [
   "- Danach genau 1 kurze Rückfrage als eigene Zeile, die mit ? endet.",
   "- Keine Listen, keine Aufzählungen, keine langen Absätze."
 ].join("\n");
+const noQuestionFinalRule = [
+  "ABSCHLUSS-REGEL (HÖCHSTE PRIORITÄT):",
+  "- Beende die meisten Antworten ohne Frage.",
+  "- Stelle nur dann eine Frage, wenn der Nutzer ausdrücklich danach fragt",
+  "  oder wenn eine Frage unvermeidbar ist.",
+  "- Stelle niemals in aufeinanderfolgenden Antworten eine Frage.",
+  "- Wenn du unsicher bist, wähle IMMER eine Antwort ohne Frage."
+].join("\n");
+
+
 const languageRule = [
   "Antwortsprache:",
   reqLang === "en"
@@ -687,14 +697,10 @@ const finalSystem =
   "\n\n" +
   bibleTone +
   "\n\n" +
-  lengthGuard;
+  lengthGuard +
+  "\n\n" +
+  noQuestionFinalRule;
 
-  "\n\n" +
-  addressRule +
-  "\n\n" +
-  bibleTone +
-  "\n\n" +
-  lengthGuard;
 
 
 
