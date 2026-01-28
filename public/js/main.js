@@ -152,13 +152,14 @@ async function apiFetch(path, options = {}) {
       ptt_release_send: "Tippe erneut zum Senden",
 
       home_hint_title: "Ein stiller Hinweis",
-      home_hint_body_1: "Jeden Tag schenke ich dir",
-      home_hint_body_2: "Texte sind immer frei",
-      home_hint_body_3: "und",
-      home_hint_body_4: "gelegentlich eine freie Stimme",
-      home_hint_body_5: "Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.",
-      home_hint_mic: "Mikrofon:",
-      home_hint_mic_text: "Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
+home_hint_body_1: "Jeden Tag schenke ich dir",
+home_hint_body_2: "Texte sind immer frei,",
+home_hint_body_3: "und",
+home_hint_body_4: "gelegentlich eine freie Stimme.",
+home_hint_body_5: "Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.",
+home_hint_mic: "Mikrofon:",
+home_hint_mic_text: "Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
+
 
       system_error_bot: "(Systemfehler beim Bot-Request)",
       mic_denied: "Mikrofon nicht verfügbar oder abgelehnt.",
