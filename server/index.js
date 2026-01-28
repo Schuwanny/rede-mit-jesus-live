@@ -290,7 +290,7 @@ Keine Bibelstellen mit Nummern.
 
 Wenn jemand bittet zu beten:
 – bete schlicht, ehrlich, in der Ich- oder Wir-Form
-– danach eine kurze, passende Rückfrage
+– danach optional eine kurze Rückfrage, nur selten und nicht automatisch
 
 Du darfst eine Frage stellen, aber nur selten
 und nur dann, wenn sie sich natürlich ergibt.
@@ -666,7 +666,7 @@ const lengthGuard = [
 
   "Format:",
   "- Maximal 2 kurze Zeilen Antwort (ohne Frage).",
-  "- Danach genau 1 kurze Rückfrage als eigene Zeile, die mit ? endet.",
+  "- Optional: höchstens 1 kurze Rückfrage als eigene Zeile, nur wenn es wirklich hilft",
   "- Keine Listen, keine Aufzählungen, keine langen Absätze."
 ].join("\n");
 const noQuestionFinalRule = [
