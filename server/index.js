@@ -70,6 +70,12 @@ const JESUS_VOICE_ID = process.env.JESUS_VOICE_ID || "";
  */
 const MARIA_VOICE_ID = process.env.MARIA_VOICE_ID || "";
 const JOSEF_VOICE_ID = process.env.JOSEF_VOICE_ID || "";
+// ===== VOICE CREDIT COST (APP-INTERN) =====
+const VOICE_CREDIT_COST = {
+  min: 1,
+  per1kChars: 1
+};
+
 
 
 function normalizeTtsText(text) {
@@ -406,14 +412,14 @@ app.set("trust proxy", true);
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 // ================== DAILY-FREE (serverseitig, pro Device) ==================
-const COST_TEXT = 10;
-const COST_TTS = 70;
+
         // TTS (Jesus spricht)
 const COST_STT = 200;         // STT (Whisper) – falls du es kostenpflichtig willst
 
-const FREE_TEXT_PER_DAY = 5;
+
 const FREE_TTS_PER_DAY = 1;
 const FREE_STT_PER_DAY = 999;
+
 
 
 
@@ -489,11 +495,12 @@ function statusPayload(d) {
   credits: d.credits || 0,
 
   dailyTextUsed: d.dailyTextUsed || 0,
-  dailyVoiceUsed: d.dailyVoiceUsed || 0, // UI: "Voice"
+  dailyVoiceUsed: d.dailyVoiceUsed || 0, // UI: "Voice"␊
   dailySttUsed: d.dailySttUsed || 0,
 
-  freeTextLeft: Math.max(0, FREE_TEXT_PER_DAY - (d.dailyTextUsed || 0)),
+
   freeVoiceLeft: Math.max(0, FREE_TTS_PER_DAY - (d.dailyVoiceUsed || 0)), // TTS-Limit
+  freeTtsLeft: Math.max(0, FREE_TTS_PER_DAY - (d.dailyVoiceUsed || 0)),
   freeSttLeft: Math.max(0, FREE_STT_PER_DAY - (d.dailySttUsed || 0)),
 
   dailyDate: d.dailyDate || todayStr()
@@ -558,50 +565,24 @@ app.post("/api/chat", async (req, res) => {
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const d = loaded.data;
-const wantTts = !!req.body.wantTts;
-
-    // Text-Limit / Credits (nur wenn KEIN Voice-Request)
-if (!wantTts) {
-  if (d.dailyTextUsed < FREE_TEXT_PER_DAY) {
-    d.dailyTextUsed += 1;
-  } else {
-    if ((d.credits || 0) < COST_TEXT) {
-      return res.status(402).json({
-        ok: false,
-        error: "NO_CREDITS_TEXT",
-        status: statusPayload(d)
-      });
-    }
-    d.credits -= COST_TEXT;
-  }
-} else {
-  // Voice-Request: vor dem OpenAI Call prüfen, ob Voice frei / Credits vorhanden sind
-  const canSpeak =
-    ((d.dailyVoiceUsed || 0) < FREE_TTS_PER_DAY) ||
-    ((d.credits || 0) >= COST_TTS);
-
-  if (!canSpeak) {
-    return res.status(402).json({
-      ok: false,
-      error: "NO_CREDITS_VOICE",
-      status: statusPayload(d)
-    });
-  }
-}
-
-
-    saveDevice(loaded.deviceId, d);
+const wantTts = !!req.body?.wantTts;
 
     if (!OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "NO_OPENAI_KEY" });
+
 
     const { text, character } = req.body || {};
         const reqLangRaw = (req.body?.lang || req.headers["x-lang"] || "de");
     const reqLang = String(Array.isArray(reqLangRaw) ? reqLangRaw[0] : reqLangRaw).toLowerCase() === "en" ? "en" : "de";
 
     const userText = (text || "").trim();
+
+
+
     const c = (character || "jesus").toLowerCase();
 
     if (!userText) return res.status(400).json({ ok: false, error: "NO_TEXT" });
+
+    d.dailyTextUsed = (d.dailyTextUsed || 0) + 1;
 
   const systemPrompt =
   character === "maria"
@@ -716,24 +697,31 @@ const finalSystem =
 
     });
 
-    const answer = completion.choices?.[0]?.message?.content?.trim() || "";
+  const answer = completion.choices?.[0]?.message?.content?.trim() || "";
         // ===== Option A – Jesus spricht (TTS nur serverseitig vorbereiten) =====
     // Wichtig: Chat bleibt textbasiert. Wir liefern nur Audio-Daten zusätzlich mit.
     // ===== Option A – Jesus / Maria spricht (TTS nur wenn Voice frei / Credits) =====
 let tts = null;
+let ttsBlocked = false;
+let ttsBlockReason = null;
+let lastTtsCost = null;
 if (!wantTts) {
   // Kein Voice-Request -> niemals TTS erzeugen (spart ElevenLabs + verhindert Voice-Verbrauch bei Text)
+  saveDevice(loaded.deviceId, d);
   return res.json({ ok: true, reply: answer, tts: null, status: statusPayload(d) });
 }
 
 if (c === "jesus" || c === "maria" || c === "josef") {
+ const freeVoiceAvailable = (d.dailyVoiceUsed || 0) < FREE_TTS_PER_DAY;
+ const units = Math.max(1, Math.ceil((answer || "").length / 1000));
+ const computedCost = Math.max(VOICE_CREDIT_COST.min, units * VOICE_CREDIT_COST.per1kChars);
+ lastTtsCost = computedCost;
+ const hasVoiceCredits = (d.credits || 0) >= computedCost;
 
- const canSpeak =
-  ((d.dailyVoiceUsed || 0) < FREE_TTS_PER_DAY) ||
-  ((d.credits || 0) >= COST_TTS);
-
-
-  if (canSpeak) {
+  if (!freeVoiceAvailable && !hasVoiceCredits) {
+    ttsBlocked = true;
+    ttsBlockReason = "NO_CREDITS_VOICE";
+  } else {
     try {
       const ttsRes =
   c === "jesus"
@@ -746,10 +734,10 @@ if (c === "jesus" || c === "maria" || c === "josef") {
 
       if (ttsRes && ttsRes.ok && ttsRes.audioBuffer) {
         // Verbrauch erst JETZT buchen (nur wenn Audio wirklich ok ist)
-        if ((d.dailyVoiceUsed || 0) < FREE_TTS_PER_DAY) {
+        if (freeVoiceAvailable) {
   d.dailyVoiceUsed = (d.dailyVoiceUsed || 0) + 1;
 } else {
-  d.credits -= COST_TTS;
+  d.credits -= computedCost;
 }
 
 
@@ -767,13 +755,20 @@ if (c === "jesus" || c === "maria" || c === "josef") {
       console.error("TTS exception:", err);
       tts = { error: "TTS_EXCEPTION" };
     }
-  } else {
-    // Kein Voice frei & keine Credits → kein TTS
-    tts = null;
   }
 }
 
-return res.json({ ok: true, reply: answer, tts, status: statusPayload(d) });
+saveDevice(loaded.deviceId, d);
+return res.json({
+  ok: true,
+  reply: answer,
+  tts,
+  ttsBlocked,
+  reason: ttsBlockReason,
+  lastTtsCost,
+  status: statusPayload(d)
+});
+
 
 
 
