@@ -131,10 +131,10 @@ async function apiFetch(path, options = {}) {
     de: {
       app_title: "Rede mit Jesus",
       back: "← Zurück",
-      free_today: "Heute frei:",
-      texts: "Texte",
       voice: "Voice",
       credits: "Credits",
+      tts_free_left: "Heute noch {count} Sprachantwort(en) frei",
+      tts_blocked_hint: "Sprachausgabe nicht verfügbar (keine Credits)",
       buy_credits: "Credits kaufen",
       buy: "Kaufen",
       cancel: "Abbrechen",
@@ -146,25 +146,20 @@ async function apiFetch(path, options = {}) {
       send: "Senden",
       placeholder_write: "Schreibe deine Nachricht...",
       placeholder_write_or_speak: "Schreibe oder sprich mit mir…",
-      placeholder_free_words_used: "Heute sind die freien Worte aufgebraucht.",
       hint_ptt: "🎙️ Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
-
-      hint_free_words_used: "Heute sind die freien Worte aufgebraucht.",
       modal_title: "Rede mit Jesus",
       modal_ok: "OK",
       ptt_release_send: "Tippe erneut zum Senden",
 
       home_hint_title: "Ein stiller Hinweis",
       home_hint_body_1: "Jeden Tag schenke ich dir",
-      home_hint_body_2: "5 freie Texte",
+      home_hint_body_2: "Texte sind immer frei",
       home_hint_body_3: "und",
-      home_hint_body_4: "1 freie Stimme",
+      home_hint_body_4: "gelegentlich eine freie Stimme",
       home_hint_body_5: "Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.",
       home_hint_mic: "Mikrofon:",
       home_hint_mic_text: "Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
 
-      limit_voice: "Mein Kind,\n\nheute ist keine freie Stimme mehr verfügbar.\nKomm morgen wieder – oder nutze Credits.",
-      limit_text: "Mein Kind,\n\nfür heute sind keine freien Worte mehr verfügbar.\nKomm morgen wieder – oder nutze Credits, um weiterzusprechen.",
       system_error_bot: "(Systemfehler beim Bot-Request)",
       mic_denied: "Mikrofon nicht verfügbar oder abgelehnt.",
       record_stop_failed: "Aufnahme konnte nicht beendet werden: ",
@@ -178,11 +173,12 @@ async function apiFetch(path, options = {}) {
     en: {
       app_title: "Talk with Jesus",
       back: "← Back",
-      free_today: "Free today:",
-      texts: "texts",
       voice: "voice",
       credits: "Credits",
+      tts_free_left: "{count} free voice response(s) left today",
+      tts_blocked_hint: "Voice output not available (no credits)",
       buy_credits: "Buy credits",
+
       buy: "Buy",
       cancel: "Cancel",
       paypal_loading: "PayPal is still loading.",
@@ -193,22 +189,18 @@ async function apiFetch(path, options = {}) {
       send: "Send",
       placeholder_write: "Type your message...",
       placeholder_write_or_speak: "Type or speak to me…",
-      placeholder_free_words_used: "Today's free messages are used up.",
       hint_ptt: "🎙️ Hold the microphone and speak from your heart.",
-      hint_free_words_used: "Today's free messages are used up.",
       modal_title: "Talk with Jesus",
       modal_ok: "OK",
       ptt_release_send: "Release to send",
       home_hint_title: "A quiet note",
       home_hint_body_1: "Every day I give you",
-      home_hint_body_2: "5 free texts",
+      home_hint_body_2: "texts are always free",
       home_hint_body_3: "and",
-      home_hint_body_4: "1 free voice",
+      home_hint_body_4: "sometimes a free voice",
       home_hint_body_5: "After that, credits help cover the ongoing costs for technology and AI.",
       home_hint_mic: "Microphone:",
       home_hint_mic_text: "Hold it and speak freely from your heart.",
-      limit_voice: "My child,\n\ntoday there is no free voice left.\nCome back tomorrow — or use credits.",
-      limit_text: "My child,\n\ntoday there are no free words left.\nCome back tomorrow — or use credits to continue.",
       system_error_bot: "(System error during bot request)",
       mic_denied: "Microphone not available or permission denied.",
       record_stop_failed: "Recording could not be stopped: ",
@@ -270,14 +262,20 @@ async function apiFetch(path, options = {}) {
 
     if (r.ok && j.ok && j.status) {
       state.credits = j.status.credits ?? state.credits;
-      state.dailyTextUsed = j.status.dailyTextUsed ?? state.dailyTextUsed;
-      state.dailyVoiceUsed = j.status.dailyVoiceUsed ?? state.dailyVoiceUsed;
+      if (typeof j.status.freeTtsLeft === "number") {
+        state.freeTtsLeft = j.status.freeTtsLeft;
+      } else if (typeof j.status.dailyVoiceUsed === "number") {
+        state.freeTtsLeft = Math.max(0, 1 - j.status.dailyVoiceUsed);
+      } else {
+        state.freeTtsLeft = null;
+      }
       render();
     }
   } catch (e) {
     console.warn("syncStatus failed:", e);
   }
 }
+
 
 
   const app = document.getElementById("app");
@@ -305,9 +303,9 @@ window.addEventListener("pointerdown", unlockAudioOnce, { once: true });
 
     // Credits (lokal, nur UI-Vorbereitung)
     credits: 0,
-    dailyTextUsed: 0,
-    dailyVoiceUsed: 0
+    freeTtsLeft: null
   };
+
   
 
 
@@ -625,7 +623,15 @@ function applyHomeHint() {
   );
 }
 
+  function formatFreeTtsStatus() {
+    if (typeof state.freeTtsLeft !== "number") return "";
+    if (state.freeTtsLeft <= 0) return "";
+    return t("tts_free_left").replace("{count}", String(state.freeTtsLeft));
+  }
+
   function renderHome() {
+
+
 
         app.innerHTML = `
             <div class="app-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
@@ -640,9 +646,9 @@ function applyHomeHint() {
 
       <div class="chat-screen" style="margin-top:-6px;">
         <div style="opacity:.7;font-size:13px;">
-          ${t("free_today")} <strong>${Math.max(0, 5 - state.dailyTextUsed)}</strong> ${t("texts")}, 
-<strong>${Math.max(0, 1 - state.dailyVoiceUsed)}</strong> ${t("voice")}
-· ${t("credits")}: <strong>${state.credits}</strong>
+          ${t("credits")}: <strong>${state.credits}</strong>
+          ${formatFreeTtsStatus() ? `· ${formatFreeTtsStatus()}` : ""}
+
 
           <details class="buy-credits">
  <summary>${t("buy_credits")}</summary>
@@ -686,20 +692,20 @@ function applyHomeHint() {
       backdrop-filter: blur(6px);
       text-align:center;
     ">
-      <div style="font-weight:600; margin-bottom:6px; opacity:.95;">
-        Ein stiller Hinweis
-      </div>
-
-      <div style="font-size:13px; line-height:1.45; opacity:.85;">
-        Jeden Tag schenke ich dir <strong>5 freie Texte</strong> und
-        <strong>1 freie Stimme</strong>.<br>
-        Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.
-      </div>
-
-      <div style="margin-top:10px; font-size:13px; opacity:.85;">
-        <strong>Mikrofon:</strong> Halte es gedrückt und sprich frei aus deinem Herzen.
-      </div>
-    </div>
+     <div style="font-weight:600; margin-bottom:6px; opacity:.95;">␊
+        ${t("home_hint_title")}
+      </div>␊
+␊
+      <div style="font-size:13px; line-height:1.45; opacity:.85;">␊
+        ${t("home_hint_body_1")} <strong>${t("home_hint_body_2")}</strong>
+        ${t("home_hint_body_3")} <strong>${t("home_hint_body_4")}</strong>.<br>
+        ${t("home_hint_body_5")}
+      </div>␊
+␊
+      <div style="margin-top:10px; font-size:13px; opacity:.85;">␊
+        <strong>${t("home_hint_mic")}</strong> ${t("home_hint_mic_text")}
+      </div>␊
+    </div>␊
 
     `;
 
@@ -886,22 +892,10 @@ const subtitle = CHARACTERS[state.character].subtitle;
 </div>
 
         <div class="chat-status">
-        <button id="test402Btn"
-  style="
-    margin-left:10px;
-    padding:4px 8px;
-    border-radius:8px;
-    border:1px solid rgba(0,0,0,.15);
-    background:#fff;
-    font-size:11px;
-    cursor:pointer;
-    opacity:.8;
-  ">
-  Test 402
-</button>
-
-  frei: ${Math.max(0, 5 - state.dailyTextUsed)} Text · ${Math.max(0, 1 - state.dailyVoiceUsed)} Voice · ${state.credits} C
+  ${t("credits")}: ${state.credits}
+  ${formatFreeTtsStatus() ? `· ${formatFreeTtsStatus()}` : ""}
 </div>
+
 
       </div>
 
@@ -917,36 +911,10 @@ const subtitle = CHARACTERS[state.character].subtitle;
 
 </div>
 <div class="hint-line" id="hintLine"></div>
-<!-- Limit-Modal (statt alert) -->
-<div id="limitModal" style="
-  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.35); z-index:9999;
-">
-  <div style="
-    width:min(560px, 92vw);
-    background:#fff;
-    border-radius:14px;
-    padding:18px 18px 14px;
-    box-shadow:0 10px 30px rgba(0,0,0,.18);
-  ">
-    <div style="font-weight:700; font-size:16px; margin-bottom:10px;">
-            ${t("modal_title")}
-
-    </div>
-    <div id="limitModalText" style="white-space:pre-line; line-height:1.35; opacity:.9;"></div>
-    <div style="display:flex; justify-content:flex-end; margin-top:14px;">
-      <button id="limitModalOk" style="
-        padding:9px 14px; border-radius:10px; border:0; cursor:pointer;
-        background:#2f6fed; color:#fff; font-weight:600;
-            ">${t("modal_ok")}</button>
-
-    </div>
-  </div>
-</div>
-
 <div class="ptt-overlay" id="pttOverlay">
   <div class="ptt-overlay-inner">
     <div class="ptt-arrow">↑</div>
+
     <div class="ptt-text">Loslassen zum Senden</div>
   </div>
 </div>
@@ -986,27 +954,14 @@ requestAnimationFrame(() => {
     const input = document.getElementById("msgInput");
     // Text nicht clientseitig sperren – serverseitig entscheidet /api/chat
 input.disabled = false;
+
 input.placeholder = t("placeholder_write_or_speak");
-
-
-if (state.dailyTextUsed >= 5) {
-  input.placeholder = t("placeholder_free_words_used");
-}
-
-
-
 
 
     const sendBtn = document.getElementById("sendBtn");
     const hintLine = document.getElementById("hintLine");
 
-    const textLocked = state.dailyTextUsed >= 5;
-if (textLocked) {
-  hintLine.textContent = t("hint_free_words_used");
-} else {
-  hintLine.textContent = t("hint_ptt");
-}
-
+    hintLine.textContent = t("hint_ptt");
 
 
     // Senden nur deaktivieren, wenn Feld leer ist – nicht wegen Daily-Free
@@ -1014,41 +969,10 @@ sendBtn.disabled = input.value.trim().length === 0;
 
 
 const voiceBtn = document.getElementById("voiceBtn");
-// DEV TEST – 402 ohne Credits
-const test402Btn = document.getElementById("test402Btn");
-if (test402Btn) {
-  test402Btn.addEventListener("click", () => {
-    openLimitModal(
-  "Mein Kind,\n\n" +
-  "heute ist keine freie Stimme mehr verfügbar.\n" +
-  "Komm morgen wieder – oder nutze Credits."
-);
-
-  });
-}
 
 const pttOverlay = document.getElementById("pttOverlay");
 const pttText = pttOverlay?.querySelector(".ptt-text");
-// ===== Limit-Modal helpers (statt alert) =====
-const limitModal = document.getElementById("limitModal");
-const limitModalText = document.getElementById("limitModalText");
-const limitModalOk = document.getElementById("limitModalOk");
 
-function openLimitModal(message) {
-  if (!limitModal || !limitModalText) return;
-  limitModalText.textContent = message;
-  limitModal.style.display = "flex";
-}
-
-function closeLimitModal() {
-  if (!limitModal) return;
-  limitModal.style.display = "none";
-}
-
-if (limitModalOk) limitModalOk.addEventListener("click", closeLimitModal);
-if (limitModal) limitModal.addEventListener("click", (e) => {
-  if (e.target === limitModal) closeLimitModal();
-});
 
 // Voice nicht clientseitig blocken – serverseitig entscheidet /api/stt
 voiceBtn.disabled = false;
@@ -1384,28 +1308,15 @@ state.messages.push({ role: "bot", text: speakingText });
 
     await syncStatus();
 
-    // 402 = keine freien Texte / keine Credits -> IMMER Modal zeigen
-if (!r.ok && r.status === 402) {
-    if (wantTts && thinkingIndex >= 0 && state.messages[thinkingIndex]?.text.endsWith(" spricht …")) {
-    state.messages.splice(thinkingIndex, 1);
-  }
-
-  openLimitModal(t("limit_text"));
-
-  await syncStatus();
-  render();
-  return;
-}
-
-
-
-
-
-   await syncStatus();
-
     if (!r.ok || !j.ok) {
-      throw new Error(j?.error || "CHAT_FAILED");
+      if (wantTts && thinkingIndex >= 0 && state.messages[thinkingIndex]?.text.endsWith(" spricht …")) {
+        state.messages.splice(thinkingIndex, 1);
+        render();
+      }
+      console.error("chat request failed:", j?.error || `HTTP_${r.status}`);
+      return;
     }
+
 
         if (wantTts && thinkingIndex >= 0 && state.messages[thinkingIndex]) {
       state.messages[thinkingIndex] = { role: "bot", text: j.reply || "" };
@@ -1414,7 +1325,7 @@ if (!r.ok && r.status === 402) {
     }
 saveConversation();
 
-    if (j.tts?.audioBase64 && j.tts?.mime) {
+    if (!j.ttsBlocked && j.tts?.audioBase64 && j.tts?.mime) {
   try {
     const binary = atob(j.tts.audioBase64);
     const bytes = new Uint8Array(binary.length);
@@ -1441,10 +1352,14 @@ saveConversation();
     }, { once: true });
 
     audio.load();
-  } catch (e) {
+ } catch (e) {
     console.warn("TTS playback failed", e);
   }
 }
+    if (wantTts && j.ttsBlocked) {
+      state.messages.push({ role: "bot", text: t("tts_blocked_hint") });
+    }
+
 
 
     await syncStatus();
@@ -1456,10 +1371,9 @@ saveConversation();
     }
 
     console.error(e);
-    state.messages.push({ role: "bot", text: t("system_error_bot") });
-
     render();
   } finally {
+
     sendBtn.disabled = false;
   }
 }
