@@ -398,12 +398,11 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 5177);
 const app = express();
 const CREDIT_PACKAGES = {
-
- "credits_2000": { credits: 2000, price: 1.99 },
-  "credits_4000": { credits: 4000, price: 3.99 },
-  "credits_6000": { credits: 6000, price: 5.99 },
-  "credits_10000": { credits: 10000, price: 8.99 }
+  "credits_20":  { credits: 20,  price: 1.99 },
+  "credits_60":  { credits: 60,  price: 4.99 },
+  "credits_120": { credits: 120, price: 8.99 }
 };
+
 
 
 // Trust proxy nur, wenn du später hinter Proxy/Hosting bist. Lokal egal.
