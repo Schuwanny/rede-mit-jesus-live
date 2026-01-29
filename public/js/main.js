@@ -150,15 +150,15 @@ async function apiFetch(path, options = {}) {
       modal_title: "Rede mit Jesus",
       modal_ok: "OK",
       ptt_release_send: "Tippe erneut zum Senden",
-
-      home_hint_title: "Ein stiller Hinweis",
-home_hint_body_1: "Jeden Tag schenke ich dir",
-home_hint_body_2: "Texte sind immer frei,",
-home_hint_body_3: "und",
-home_hint_body_4: "gelegentlich eine freie Stimme.",
-home_hint_body_5: "Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.",
-home_hint_mic: "Mikrofon:",
-home_hint_mic_text: "Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
+     
+     home_hint_title: "Ein stiller Hinweis",
+    home_hint_body_1: "Jeden Tag schenke ich dir",
+    home_hint_body_2: "Texte sind immer frei,",
+    home_hint_body_3: "und",
+    home_hint_body_4: "gelegentlich eine freie Stimme.",
+    home_hint_body_5: "Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.",
+    home_hint_mic: "Mikrofon:",
+    home_hint_mic_text: "Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
 
 
       system_error_bot: "(Systemfehler beim Bot-Request)",
@@ -299,6 +299,8 @@ window.addEventListener("pointerdown", unlockAudioOnce, { once: true });
     messages: [],          // { role: "user"|"bot", text: string }
     resumeCandidate: null,
     resumePromptShown: false,
+    isSending: false,
+
 
     lang: getLang(),
 
@@ -418,11 +420,11 @@ function renderPayPalPackages() {
 
   // IDs müssen zu server/index.js CREDIT_PACKAGES passen
   const PACKS = [
-    { id: "credits_2000",  label: "2.000 Credits",  price: "1,99 €" },
-    { id: "credits_4000",  label: "4.000 Credits",  price: "3,99 €" },
-    { id: "credits_6000",  label: "6.000 Credits",  price: "5,99 €" },
-    { id: "credits_10000", label: "10.000 Credits", price: "8,99 €" }
+    { id: "credits_20",  label: "20 Credits",  price: "1,99 €" },
+    { id: "credits_60",  label: "60 Credits",  price: "4,99 €" },
+    { id: "credits_120", label: "120 Credits", price: "8,99 €" }
   ];
+
 // ===== PayPal Start (Phase 8.2.3.3) =====
 function startPayPalBuy(packageId) {
   console.log("startPayPalBuy packageId=", packageId);
@@ -480,11 +482,11 @@ btn.style.display = "none";
 
   // Preise müssen zu deinen Paketen passen (nur Anzeige / PayPal Order)
   const PRICE_MAP = {
-    credits_2000: "1.99",
-    credits_4000: "3.99",
-    credits_6000: "5.99",
-    credits_10000: "8.99"
+    credits_20: "1.99",
+    credits_60: "4.99",
+    credits_120: "8.99"
   };
+
 
   const value = PRICE_MAP[packageId];
   if (!value) {
@@ -630,7 +632,18 @@ function applyHomeHint() {
     return t("tts_free_left").replace("{count}", String(state.freeTtsLeft));
   }
 
+  function sanitizeHintText(value) {
+    return String(value || "").replace(/[\u0000-\u001F\u007F\u200B-\u200D\u2060\uFEFF\u2028\u2029]/g, "");
+  }
+
+  function formatFreeTtsStatus() {
+    if (typeof state.freeTtsLeft !== "number") return "";
+    if (state.freeTtsLeft <= 0) return "";
+    return t("tts_free_left").replace("{count}", String(state.freeTtsLeft));
+  }
+
   function renderHome() {
+
 
 
 
@@ -693,20 +706,20 @@ function applyHomeHint() {
       backdrop-filter: blur(6px);
       text-align:center;
     ">
-     <div style="font-weight:600; margin-bottom:6px; opacity:.95;">␊
-        ${t("home_hint_title")}
-      </div>␊
-␊
-      <div style="font-size:13px; line-height:1.45; opacity:.85;">␊
-        ${t("home_hint_body_1")} <strong>${t("home_hint_body_2")}</strong>
-        ${t("home_hint_body_3")} <strong>${t("home_hint_body_4")}</strong>.<br>
-        ${t("home_hint_body_5")}
-      </div>␊
-␊
-      <div style="margin-top:10px; font-size:13px; opacity:.85;">␊
-        <strong>${t("home_hint_mic")}</strong> ${t("home_hint_mic_text")}
-      </div>␊
-    </div>␊
+     <div style="font-weight:600; margin-bottom:6px; opacity:.95;">
+        ${sanitizeHintText(t("home_hint_title"))}
+      </div>
+
+      <div style="font-size:13px; line-height:1.45; opacity:.85;">
+        ${sanitizeHintText(t("home_hint_body_1"))} <strong>${sanitizeHintText(t("home_hint_body_2"))}</strong>
+        ${sanitizeHintText(t("home_hint_body_3"))} <strong>${sanitizeHintText(t("home_hint_body_4"))}</strong>.<br>
+        ${sanitizeHintText(t("home_hint_body_5"))}
+      </div>
+
+      <div style="margin-top:10px; font-size:13px; opacity:.85;">
+        <strong>${sanitizeHintText(t("home_hint_mic"))}</strong> ${sanitizeHintText(t("home_hint_mic_text"))}
+      </div>
+    </div>
 
     `;
 
@@ -1261,6 +1274,9 @@ voiceBtn.addEventListener("click", async (e) => {
 
   const text = input.value.trim();
   if (!text) return;
+  if (state.isSending) return;
+  state.isSending = true;
+
 
   // user message
   state.messages.push({ role: "user", text });
@@ -1374,10 +1390,11 @@ saveConversation();
     console.error(e);
     render();
   } finally {
-
+    state.isSending = false;
     sendBtn.disabled = false;
   }
 }
+
 
   }
 
