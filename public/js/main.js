@@ -125,6 +125,15 @@ async function apiFetch(path, options = {}) {
     } catch {}
     applyI18nStatic();
     render();
+    // 🔁 Update PayPal donate button text on language switch
+const donateBtn = document.querySelector('#paypal-packages a[href*="paypal.me"]');
+if (donateBtn) {
+  donateBtn.textContent =
+    state.lang === "en"
+      ? "🙏 Support Talk with Jesus"
+      : "🙏 Rede mit Jesus unterstützen";
+}
+
   }
 
   const I18N = {
