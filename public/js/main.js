@@ -647,12 +647,11 @@ donateBtn.style.justifyContent = "center";
 donateBtn.style.width = "100%";
 donateBtn.style.padding = "10px 12px";
 donateBtn.style.borderRadius = "12px";
-donateBtn.style.border = "1px solid rgba(0,0,0,.12)";
-donateBtn.style.background = "#fff";
+
 donateBtn.style.cursor = "pointer";
 donateBtn.style.fontWeight = "700";
 donateBtn.style.textDecoration = "none";
-donateBtn.style.color = "#111";
+
 
 // ✅ HIER war der Bug: Button wurde nie in die Zeile eingefügt
 donateRow.appendChild(donateBtn);

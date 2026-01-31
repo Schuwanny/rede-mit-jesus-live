@@ -1212,3 +1212,14 @@ body.rmj-chat .chat-input{
   background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.18);
 }
+/* Donate Button – passt sich an Buy/Modal Look an */
+#paypal-packages a[href*="paypal.me"]{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.92);
+}
+
+#paypal-packages a[href*="paypal.me"]:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.18);
+}
