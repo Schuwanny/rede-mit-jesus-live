@@ -600,6 +600,35 @@ onError: (err) => {
     });
   });
 }
+  // ===== PayPal.Me Spende =====
+  const PAYPAL_ME_DONATE_URL = "https://paypal.me/redemitjesus";
+
+
+  const donateRow = document.createElement("div");
+  donateRow.style.marginTop = "12px";
+
+  const donateBtn = document.createElement("a");
+  donateBtn.href = PAYPAL_ME_DONATE_URL;
+  donateBtn.target = "_blank";
+  donateBtn.rel = "noopener noreferrer";
+  donateBtn.textContent = "🙏 Rede mit Jesus unterstützen";
+
+
+  donateBtn.style.display = "inline-flex";
+  donateBtn.style.alignItems = "center";
+  donateBtn.style.justifyContent = "center";
+  donateBtn.style.width = "100%";
+  donateBtn.style.padding = "10px 12px";
+  donateBtn.style.borderRadius = "12px";
+  donateBtn.style.border = "1px solid rgba(0,0,0,.12)";
+  donateBtn.style.background = "#fff";
+  donateBtn.style.cursor = "pointer";
+  donateBtn.style.fontWeight = "700";
+  donateBtn.style.textDecoration = "none";
+  donateBtn.style.color = "#111";
+
+  donateRow.appendChild(donateBtn);
+  wrap.appendChild(donateRow);
 
   // ===== RENDER =====
 function render() {
