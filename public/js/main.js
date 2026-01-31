@@ -627,7 +627,8 @@ onError: (err) => {
   donateBtn.style.textDecoration = "none";
   donateBtn.style.color = "#111";
 
-  donateRow.appendChild(donateBtn);
+  document.getElementById("paypal-packages")?.appendChild(donateRow);
+
   wrap.appendChild(donateRow);
 
   // ===== RENDER =====
