@@ -618,7 +618,11 @@ onError: (err) => {
     donateBtn.href = "https://paypal.me/redemitjesus";
     donateBtn.target = "_blank";
     donateBtn.rel = "noopener noreferrer";
-    donateBtn.textContent = "🙏 Rede mit Jesus unterstützen";
+   donateBtn.textContent =
+  state.lang === "en"
+    ? "🙏 Support Talk with Jesus"
+    : "🙏 Rede mit Jesus unterstützen";
+
 
     donateBtn.style.display = "inline-flex";
     donateBtn.style.alignItems = "center";
