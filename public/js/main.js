@@ -143,7 +143,7 @@ if (donateBtn) {
       voice: "Voice",
       credits: "Credits",
       tts_free_left: "Heute noch {count} Sprachantwort(en) frei",
-      tts_blocked_hint: "Sprachausgabe nicht verfügbar (keine Credits)",
+      tts_blocked_hint: "Die Sprachausgabe ist für heute erschöpft.",
       buy_credits: "Credits kaufen",
       buy: "Kaufen",
       cancel: "Abbrechen",
