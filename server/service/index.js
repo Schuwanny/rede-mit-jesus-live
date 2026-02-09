@@ -250,44 +250,53 @@ function getDeviceId(req) {
   return (Array.isArray(h) ? h[0] : h || "").trim();
 }
 
-function loadDevice(req) {
-  const deviceId = getDeviceId(req);
+async function loadDevice(req) {
+  const deviceId = String(req.headers["x-device-id"] || "").trim();
   if (!deviceId) return { ok: false, error: "NO_DEVICE_ID" };
 
-  const all = readDevices();
-  const t = todayStr();
+  const ref = db.collection("devices").doc(deviceId);
+  const snap = await ref.get();
+  const cur = snap.exists ? (snap.data() || {}) : {};
 
-  if (!all[deviceId]) {
-    all[deviceId] = { credits: 0, dailyTextUsed: 0, dailyVoiceUsed: 0, dailyDate: t };
-  }
+  const data = {
+    credits: Number(cur.credits || 0),
+    dailyTextUsed: Number(cur.dailyTextUsed || 0),
+    dailyVoiceUsed: Number(cur.dailyVoiceUsed || 0),
+    dailySttUsed: Number(cur.dailySttUsed || 0),
 
-  // Daily Reset
-  if (all[deviceId].dailyDate !== t) {
-    all[deviceId].dailyDate = t;
-    all[deviceId].dailyTextUsed = 0;
-    all[deviceId].dailyVoiceUsed = 0;
-  }
+    dailyTextDate: cur.dailyTextDate || null,
+    dailyVoiceDate: cur.dailyVoiceDate || null,
+    dailySttDate: cur.dailySttDate || null,
 
-  writeDevices(all);
-  return { ok: true, deviceId, data: all[deviceId] };
-}
-
-function saveDevice(deviceId, data) {
-  const all = readDevices();
-  all[deviceId] = data;
-  writeDevices(all);
-}
-
-function statusPayload(d) {
-  return {
-    credits: d.credits || 0,
-    dailyTextUsed: d.dailyTextUsed || 0,
-    dailyVoiceUsed: d.dailyVoiceUsed || 0,
-    freeTextLeft: Math.max(0, FREE_TEXT_PER_DAY - (d.dailyTextUsed || 0)),
-    freeVoiceLeft: Math.max(0, FREE_VOICE_PER_DAY - (d.dailyVoiceUsed || 0)),
-    dailyDate: d.dailyDate || todayStr()
+    balanceText: Number(cur.balanceText || 0),
+    balanceVoice: Number(cur.balanceVoice || 0),
+    balanceStt: Number(cur.balanceStt || 0)
   };
+
+  await ref.set(
+    {
+      ...(snap.exists ? {} : { createdAt: admin.firestore.FieldValue.serverTimestamp() }),
+      lastSeenAt: admin.firestore.FieldValue.serverTimestamp()
+    },
+    { merge: true }
+  );
+
+  return { ok: true, deviceId, data };
 }
+async function saveDevice(deviceId, data) {
+  const id = String(deviceId || "").trim();
+  if (!id) return;
+
+  const ref = db.collection("devices").doc(id);
+  await ref.set(
+    {
+      ...data,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
 // ========================================================================
 
 // Static Frontend
@@ -326,7 +335,8 @@ app.post("/api/upload-audio", upload.single("audio"), (req, res) => {
 });
 app.post("/api/chat", async (req, res) => {
   try {
-        const loaded = loadDevice(req);
+        const loaded = await loadDevice(req);
+
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const d = loaded.data;
@@ -578,7 +588,8 @@ return res.json({ ok: true, reply: answer, tts, status: statusPayload(d) });
 // ===== STT: Audio -> Text (Whisper) + Daily-Free Voice / Credits =====
 app.post("/api/stt", upload.single("audio"), async (req, res) => {
   try {
-    const loaded = loadDevice(req);
+    const loaded = await loadDevice(req);
+
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const d = loaded.data;
@@ -651,7 +662,8 @@ app.post("/api/stt", upload.single("audio"), async (req, res) => {
 // ===== PAYPAL: Order bestätigen + Credits gutschreiben =====
 app.post("/api/paypal/confirm", async (req, res) => {
   try {
-    const loaded = loadDevice(req);
+    const loaded = await loadDevice(req);
+
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const { packageId, orderId } = req.body || {};
@@ -695,7 +707,8 @@ app.post("/api/paypal/confirm", async (req, res) => {
     // 3) Credits gutschreiben (NUR hier!)
     const d = loaded.data;
     d.credits = Number(d.credits || 0) + Number(pack.credits || 0);
-    saveDevice(loaded.deviceId, d);
+    await saveDevice(loaded.deviceId, d);
+
 
     return res.json({
       ok: true,
@@ -708,12 +721,17 @@ app.post("/api/paypal/confirm", async (req, res) => {
   }
 });
 
-app.get("/api/status", (req, res) => {
-  const loaded = loadDevice(req);
+app.get("/api/status", async (req, res) => {
+  const loaded = await loadDevice(req);
   if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
-  return res.json({ ok: true, status: statusPayload(loaded.data) });
+  return res.json({
+    ok: true,
+    deviceId: loaded.deviceId,
+    status: statusPayload(loaded.data),
+  });
 });
+
 
 app.get("/api/health", (req, res) => {
   res.json({
