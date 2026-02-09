@@ -331,21 +331,65 @@ app.post("/api/chat", async (req, res) => {
 
     const d = loaded.data;
 
-    // Text-Limit / Credits
-    if (d.dailyTextUsed < FREE_TEXT_PER_DAY) {
-      d.dailyTextUsed += 1;
-    } else {
-      if ((d.credits || 0) < COST_TEXT) {
-        return res.status(402).json({
-          ok: false,
-          error: "NO_CREDITS_TEXT",
-          status: statusPayload(d)
-        });
-      }
-      d.credits -= COST_TEXT;
-    }
+    // Text-Limit / Credits (Firestore – deploy-sicher)
+const deviceId = loaded.deviceId;
+const today = new Date().toISOString().slice(0, 10);
+const deviceRef = db.collection("devices").doc(deviceId);
 
-    saveDevice(loaded.deviceId, d);
+let statusAfter = null;
+
+await db.runTransaction(async (tx) => {
+  const snap = await tx.get(deviceRef);
+  const cur = snap.exists ? snap.data() : {};
+
+  const lastDay = cur.dailyTextDate || null;
+  const usedToday = lastDay === today ? (cur.dailyTextUsed || 0) : 0;
+  const balanceText = cur.balanceText || 0;
+
+  if (usedToday < FREE_TEXT_PER_DAY) {
+    tx.set(deviceRef, {
+      dailyTextDate: today,
+      dailyTextUsed: usedToday + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    statusAfter = {
+      dailyTextUsed: usedToday + 1,
+      balanceText
+    };
+    return;
+  }
+
+  if (balanceText < COST_TEXT) {
+    statusAfter = {
+      dailyTextUsed: usedToday,
+      balanceText
+    };
+    const err = new Error("NO_CREDITS_TEXT");
+    err.http = 402;
+    throw err;
+  }
+
+  tx.set(db.collection("credit_ledger").doc(), {
+    deviceId,
+    amount: -COST_TEXT,
+    reason: "chat_text",
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  tx.set(deviceRef, {
+    balanceText: balanceText - COST_TEXT,
+    dailyTextDate: today,
+    dailyTextUsed: usedToday,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  statusAfter = {
+    dailyTextUsed: usedToday,
+    balanceText: balanceText - COST_TEXT
+  };
+});
+
 
     if (!OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "NO_OPENAI_KEY" });
 
@@ -517,10 +561,20 @@ return res.json({ ok: true, reply: answer, tts, status: statusPayload(d) });
 
 
   } catch (e) {
-    console.error("CHAT exception:", e);
-    return res.status(500).json({ ok: false, error: "CHAT_EXCEPTION" });
+
+  if (e && (e.message === "NO_CREDITS_TEXT" || e.http === 402)) {
+    return res.status(402).json({
+      ok: false,
+      error: "NO_CREDITS_TEXT",
+      status: statusAfter
+    });
   }
+
+  console.error("CHAT exception:", e);
+  return res.status(500).json({ ok: false, error: "CHAT_EXCEPTION" });
+}
 });
+
 // ===== STT: Audio -> Text (Whisper) + Daily-Free Voice / Credits =====
 app.post("/api/stt", upload.single("audio"), async (req, res) => {
   try {
