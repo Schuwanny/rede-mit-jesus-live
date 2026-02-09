@@ -566,11 +566,16 @@ if (c === "jesus" || c === "maria" || c === "josef") {
   }
 }
 
-return res.json({ ok: true, reply: answer, tts, status: statusPayload(d) });
+return res.json({ ok: true, deviceId: loaded.deviceId, status: statusPayload(loaded.data) });
 
 
 
   } catch (e) {
+const statusAfter = e?.statusAfter;
+
+    if (e?.message === "NO_CREDITS_TEXT" || e?.http === 402) {
+      return res.status(402).json({ ok: false, error: "NO_CREDITS_TEXT", status: statusAfter });
+    }
 
   if (e && (e.message === "NO_CREDITS_TEXT" || e.http === 402)) {
     return res.status(402).json({
