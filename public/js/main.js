@@ -46,7 +46,7 @@ function rmjShowDebug(text) {
 }
 
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // ========= API BASE (Web vs. Capacitor Native) =========
  const IS_CAPACITOR = Boolean(
   // Android/iOS WebView liefert i.d.R. window.Capacitor + Native-Flag.
@@ -90,7 +90,7 @@ function apiUrl(path) {
   return base + path;
 }
 
-
+let deviceId = "";
 
 async function apiFetch(path, options = {}) {
   const finalOptions = { ...options };
@@ -99,6 +99,7 @@ async function apiFetch(path, options = {}) {
   const headers = new Headers(finalOptions.headers || {});
   // Standard-Accept hilft bei JSON-Antworten in WebViews.
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  if (deviceId && !headers.has("x-device-id")) headers.set("x-device-id", deviceId);
   // Content-Type nur setzen, wenn kein FormData gesendet wird.
   if (finalOptions.body && !(finalOptions.body instanceof FormData)) {
     if (!headers.has("Content-Type") && typeof finalOptions.body === "string") {
@@ -250,15 +251,56 @@ if (donateBtn) {
   }
 
     const DEVICE_KEY = "rmj_device_id";
-  function getDeviceId() {
-    let id = localStorage.getItem(DEVICE_KEY);
+  
+  function generateDeviceId() {
+    return crypto?.randomUUID?.() || ("dev_" + Math.random().toString(16).slice(2) + Date.now());
+  }
+
+  async function readCapacitorDeviceId() {
+    const preferences = window.Capacitor?.Plugins?.Preferences;
+    if (!preferences?.get) return null;
+    try {
+      const result = await preferences.get({ key: DEVICE_KEY });
+      return (result?.value || "").trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function writeCapacitorDeviceId(id) {
+    const preferences = window.Capacitor?.Plugins?.Preferences;
+    if (!preferences?.set) return;
+    try {
+      await preferences.set({ key: DEVICE_KEY, value: id });
+    } catch {
+      // localStorage fallback bleibt aktiv
+    }
+  }
+
+  async function getOrCreateDeviceId() {
+    let id = null;
+
+    if (IS_CAPACITOR) {
+      id = await readCapacitorDeviceId();
+    }
+
     if (!id) {
-      id = (crypto?.randomUUID?.() || ("dev_" + Math.random().toString(16).slice(2) + Date.now()));
-      localStorage.setItem(DEVICE_KEY, id);
+      id = (localStorage.getItem(DEVICE_KEY) || "").trim() || null;
+    }
+
+
+    if (!id) {
+      id = generateDeviceId();
+    }
+
+    localStorage.setItem(DEVICE_KEY, id);
+    if (IS_CAPACITOR) {
+      await writeCapacitorDeviceId(id);
+
     }
     return id;
   }
-  const deviceId = getDeviceId();
+  deviceId = await getOrCreateDeviceId();
 // (API Base: entfernt – wir nutzen ausschließlich API_ORIGIN + apiFetch oben)
 
 

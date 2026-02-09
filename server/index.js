@@ -461,6 +461,92 @@ const COST_STT = 200;         // STT (Whisper) – falls du es kostenpflichtig w
 const FREE_TTS_PER_DAY = 1;
 const FREE_STT_PER_DAY = 999;
 
+const DEVICES_JSON_PATH = path.join(__dirname, "devices.json");
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getDeviceId(req) {
+  const raw =
+    req.headers["x-device-id"] ||
+    req.body?.deviceId ||
+    req.query?.deviceId ||
+    "";
+
+  const value = String(Array.isArray(raw) ? raw[0] : raw).trim();
+  if (!value) return "";
+  return value.replace(/[^a-zA-Z0-9._:-]/g, "").slice(0, 200);
+}
+
+let legacyDevicesCache = null;
+
+async function loadLegacyDevices() {
+  if (legacyDevicesCache !== null) return legacyDevicesCache;
+
+  try {
+    if (!fs.existsSync(DEVICES_JSON_PATH)) {
+      legacyDevicesCache = {};
+      return legacyDevicesCache;
+    }
+
+    const raw = await fs.promises.readFile(DEVICES_JSON_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    legacyDevicesCache = parsed && typeof parsed === "object" ? parsed : {};
+  } catch (e) {
+    console.warn("Legacy devices.json konnte nicht gelesen werden:", e.message);
+    legacyDevicesCache = {};
+  }
+
+  return legacyDevicesCache;
+}
+
+function normalizeDeviceData(base, t) {
+  const data = {
+    credits: Number(base?.credits || 0),
+    dailyTextUsed: Number(base?.dailyTextUsed || 0),
+    dailyVoiceUsed: Number(base?.dailyVoiceUsed || 0),
+    dailySttUsed: Number(base?.dailySttUsed || 0),
+    dailyDate: base?.dailyDate || t,
+    migrationChecked: !!base?.migrationChecked,
+    migratedFromDevicesJsonAt: base?.migratedFromDevicesJsonAt || null,
+  };
+
+  if (data.dailyDate !== t) {
+    data.dailyDate = t;
+    data.dailyTextUsed = 0;
+    data.dailyVoiceUsed = 0;
+    data.dailySttUsed = 0;
+  }
+
+  return data;
+}
+
+async function mutateDevice(deviceId, mutator) {
+  const t = todayStr();
+  const ref = db.collection("devices").doc(deviceId);
+  const legacy = await loadLegacyDevices();
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const base = snap.exists ? snap.data() : null;
+    const data = normalizeDeviceData(base, t);
+
+    const firestoreEmpty = !snap.exists || typeof base?.credits !== "number";
+    const legacyCredits = Number(legacy?.[deviceId]?.credits || 0);
+    if (firestoreEmpty && legacyCredits > 0) {
+      data.credits = legacyCredits;
+      data.migratedFromDevicesJsonAt = new Date().toISOString();
+    }
+    data.migrationChecked = true;
+
+    await mutator(data);
+
+    tx.set(ref, data, { merge: true });
+    return data;
+  });
+}
+
 
 
 
@@ -491,38 +577,8 @@ async function loadDevice(req) {
   const deviceId = getDeviceId(req);
   if (!deviceId) return { ok: false, error: "NO_DEVICE_ID" };
 
-  
-  const t = todayStr();
-  const ref = db.collection("devices").doc(deviceId);
-
-  let dataOut = null;
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-
-    const base = snap.exists ? snap.data() : null;
-
-    const data = base || {
-      credits: 0,
-      dailyTextUsed: 0,
-      dailyVoiceUsed: 0, // UI nennt es "Voice" (TTS)
-      dailySttUsed: 0,
-      dailyDate: t,
-    };
-
-    // Daily Reset
-    if (data.dailyDate !== t) {
-      data.dailyDate = t;
-      data.dailyTextUsed = 0;
-      data.dailyVoiceUsed = 0;
-      data.dailySttUsed = 0;
-    }
-
-    tx.set(ref, data, { merge: true });
-    dataOut = data;
-  });
-
-  return { ok: true, deviceId, data: dataOut };
+  const data = await mutateDevice(deviceId, async () => {});
+  return { ok: true, deviceId, data };
 }
 
 async function saveDevice(deviceId, data) {
@@ -746,7 +802,7 @@ let ttsBlockReason = null;
 let lastTtsCost = null;
 if (!wantTts) {
   // Kein Voice-Request -> niemals TTS erzeugen (spart ElevenLabs + verhindert Voice-Verbrauch bei Text)
-  saveDevice(loaded.deviceId, d);
+  await saveDevice(loaded.deviceId, d);
   return res.json({ ok: true, reply: answer, tts: null, status: statusPayload(d) });
 }
 
@@ -773,14 +829,22 @@ if (c === "jesus" || c === "maria" || c === "josef") {
 
       if (ttsRes && ttsRes.ok && ttsRes.audioBuffer) {
         // Verbrauch erst JETZT buchen (nur wenn Audio wirklich ok ist)
-        if (freeVoiceAvailable) {
-  d.dailyVoiceUsed = (d.dailyVoiceUsed || 0) + 1;
-} else {
-  d.credits -= computedCost;
-}
+        const persisted = await mutateDevice(loaded.deviceId, async (next) => {
+          if ((next.dailyVoiceUsed || 0) < FREE_TTS_PER_DAY) {
+            next.dailyVoiceUsed = (next.dailyVoiceUsed || 0) + 1;
+            return;
+          }
 
+          if ((next.credits || 0) < computedCost) {
+            const err = new Error("NO_CREDITS_VOICE");
+            err.code = "NO_CREDITS_VOICE";
+            throw err;
+          }
 
-        saveDevice(loaded.deviceId, d);
+          next.credits -= computedCost;
+        });
+
+        Object.assign(d, persisted);
 
         tts = {
           mime: ttsRes.mime || "audio/mpeg",
@@ -791,13 +855,19 @@ if (c === "jesus" || c === "maria" || c === "josef") {
         tts = { error: (ttsRes && ttsRes.error) ? ttsRes.error : "TTS_FAILED" };
       }
     } catch (err) {
-      console.error("TTS exception:", err);
-      tts = { error: "TTS_EXCEPTION" };
+      if (err?.code === "NO_CREDITS_VOICE") {
+        ttsBlocked = true;
+        ttsBlockReason = "NO_CREDITS_VOICE";
+        tts = null;
+      } else {
+        console.error("TTS exception:", err);
+        tts = { error: "TTS_EXCEPTION" };
+      }
     }
   }
 }
 
-saveDevice(loaded.deviceId, d);
+await saveDevice(loaded.deviceId, d);
 return res.json({
   ok: true,
   reply: answer,
@@ -823,24 +893,20 @@ app.post("/api/stt", upload.single("audio"), async (req, res) => {
 
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
-    const d = loaded.data;
+    const d = await mutateDevice(loaded.deviceId, async (next) => {
+      if ((next.dailySttUsed || 0) < FREE_STT_PER_DAY) {
+        next.dailySttUsed = (next.dailySttUsed || 0) + 1;
+        return;
+      }
 
-    // STT-Limit / Credits (separat von TTS!)
-if ((d.dailySttUsed || 0) < FREE_STT_PER_DAY) {
-  d.dailySttUsed = (d.dailySttUsed || 0) + 1;
-} else {
-  if ((d.credits || 0) < COST_STT) {
-    return res.status(402).json({
-      ok: false,
-      error: "NO_CREDITS_STT",
-      status: statusPayload(d)
+      if ((next.credits || 0) < COST_STT) {
+        const err = new Error("NO_CREDITS_STT");
+        err.code = "NO_CREDITS_STT";
+        throw err;
+      }
+
+      next.credits -= COST_STT;
     });
-  }
-  d.credits -= COST_STT;
-}
-
-
-    saveDevice(loaded.deviceId, d);
 
     if (!req.file) return res.status(400).json({ ok: false, error: "NO_FILE" });
     if (!OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "NO_OPENAI_KEY" });
@@ -880,6 +946,11 @@ if ((d.dailySttUsed || 0) < FREE_STT_PER_DAY) {
       status: statusPayload(d)
     });
   } catch (e) {
+    if (e?.code === "NO_CREDITS_STT") {
+      const loaded = await loadDevice(req);
+      const status = loaded.ok ? statusPayload(loaded.data) : undefined;
+      return res.status(402).json({ ok: false, error: "NO_CREDITS_STT", status });
+    }
     console.error("STT exception:", e);
     return res.status(500).json({ ok: false, error: "STT_EXCEPTION" });
   } finally {
@@ -939,15 +1010,15 @@ app.post("/api/paypal/confirm", async (req, res) => {
       });
     }
 
-    // 3) Credits gutschreiben (NUR hier!)
-    const d = loaded.data;
-    d.credits = Number(d.credits || 0) + Number(pack.credits || 0);
-    saveDevice(loaded.deviceId, d);
+    // 3) Credits gutschreiben (Firestore-Transaktion)
+    const updated = await mutateDevice(loaded.deviceId, async (d) => {
+      d.credits = Number(d.credits || 0) + Number(pack.credits || 0);
+    });
 
     return res.json({
       ok: true,
       creditsAdded: pack.credits,
-      status: statusPayload(d)
+      status: statusPayload(updated)
     });
   } catch (e) {
     console.error("PAYPAL confirm exception:", e);
@@ -973,7 +1044,7 @@ app.post("/api/dev/reset-daily", async (req, res) => {
   d.dailyVoiceUsed = 0; // TTS ("Voice")
   d.dailySttUsed = 0;   // STT separat
 
-  saveDevice(loaded.deviceId, d);
+  await saveDevice(loaded.deviceId, d);
   return res.json({ ok: true, status: statusPayload(d) });
 });
 
