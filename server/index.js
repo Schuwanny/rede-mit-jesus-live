@@ -465,97 +465,94 @@ const FREE_STT_PER_DAY = 999;
 
 
 
-const dataDir = path.join(__dirname, "data");
-const devicesFile = path.join(dataDir, "devices.json");
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-if (!fs.existsSync(devicesFile)) fs.writeFileSync(devicesFile, JSON.stringify({}), "utf-8");
+// ===== FIRESTORE (Credits/Device-Status persistent) =====
+import admin from "firebase-admin";
 
-function todayStr() {
-  // YYYY-MM-DD (lokal reicht)
-  return new Date().toISOString().slice(0, 10);
+function initFirebaseAdmin() {
+  if (admin.apps.length) return;
+  const raw =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+    (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64
+      ? Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8")
+      : "");
+
+  if (!raw) throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON (or _BASE64)");
+
+  const serviceAccount = JSON.parse(raw);
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 }
 
-function readDevices() {
-  try {
-    return JSON.parse(fs.readFileSync(devicesFile, "utf-8") || "{}");
-  } catch {
-    return {};
-  }
-}
+initFirebaseAdmin();
+const db = admin.firestore();
 
-function writeDevices(obj) {
-  fs.writeFileSync(devicesFile, JSON.stringify(obj, null, 2), "utf-8");
-}
-
-function getDeviceId(req) {
-  const h = req.headers["x-device-id"];
-  return (Array.isArray(h) ? h[0] : h || "").trim();
-}
-
-function loadDevice(req) {
+// Collection: devices/{deviceId}
+// Fields: credits, dailyTextUsed, dailyVoiceUsed, dailySttUsed, dailyDate
+async function loadDevice(req) {
   const deviceId = getDeviceId(req);
   if (!deviceId) return { ok: false, error: "NO_DEVICE_ID" };
 
-  const all = readDevices();
+  
   const t = todayStr();
+  const ref = db.collection("devices").doc(deviceId);
 
-  if (!all[deviceId]) {
-    all[deviceId] = {
-  credits: 0,
-  dailyTextUsed: 0,
-  dailyVoiceUsed: 0, // = TTS Verbrauch (UI nennt es "Voice")
-  dailySttUsed: 0,   // = STT separat
-  dailyDate: t
-};
+  let dataOut = null;
 
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
 
-  }
+    const base = snap.exists ? snap.data() : null;
 
-  // Daily Reset
-  if (all[deviceId].dailyDate !== t) {
-    all[deviceId].dailyDate = t;
-    all[deviceId].dailyTextUsed = 0;
-all[deviceId].dailyVoiceUsed = 0;
-all[deviceId].dailySttUsed = 0;
+    const data = base || {
+      credits: 0,
+      dailyTextUsed: 0,
+      dailyVoiceUsed: 0, // UI nennt es "Voice" (TTS)
+      dailySttUsed: 0,
+      dailyDate: t,
+    };
 
+    // Daily Reset
+    if (data.dailyDate !== t) {
+      data.dailyDate = t;
+      data.dailyTextUsed = 0;
+      data.dailyVoiceUsed = 0;
+      data.dailySttUsed = 0;
+    }
 
-  }
+    tx.set(ref, data, { merge: true });
+    dataOut = data;
+  });
 
-  writeDevices(all);
-  return { ok: true, deviceId, data: all[deviceId] };
+  return { ok: true, deviceId, data: dataOut };
 }
 
-function saveDevice(deviceId, data) {
-  const all = readDevices();
-  all[deviceId] = data;
-  writeDevices(all);
+async function saveDevice(deviceId, data) {
+  await db.collection("devices").doc(deviceId).set(data, { merge: true });
 }
 
 function statusPayload(d) {
   return {
-  credits: d.credits || 0,
+    credits: d.credits || 0,
 
-  dailyTextUsed: d.dailyTextUsed || 0,
-  dailyVoiceUsed: d.dailyVoiceUsed || 0, // UI: "Voice"␊
-  dailySttUsed: d.dailySttUsed || 0,
+    dailyTextUsed: d.dailyTextUsed || 0,
+    dailyVoiceUsed: d.dailyVoiceUsed || 0,
+    dailySttUsed: d.dailySttUsed || 0,
 
+    freeVoiceLeft: Math.max(0, FREE_TTS_PER_DAY - (d.dailyVoiceUsed || 0)),
+    freeTtsLeft: Math.max(0, FREE_TTS_PER_DAY - (d.dailyVoiceUsed || 0)),
+    freeSttLeft: Math.max(0, FREE_STT_PER_DAY - (d.dailySttUsed || 0)),
 
-  freeVoiceLeft: Math.max(0, FREE_TTS_PER_DAY - (d.dailyVoiceUsed || 0)), // TTS-Limit
-  freeTtsLeft: Math.max(0, FREE_TTS_PER_DAY - (d.dailyVoiceUsed || 0)),
-  freeSttLeft: Math.max(0, FREE_STT_PER_DAY - (d.dailySttUsed || 0)),
-
-  dailyDate: d.dailyDate || todayStr()
-};
-
+    dailyDate: d.dailyDate || todayStr(),
+  };
 }
+
 
 // ========================================================================
 
 // Static Frontend
 const publicDir = path.join(__dirname, "..", "public");
 app.use(express.static(publicDir));
-app.get("/api/status", (req, res) => {
-  const loaded = loadDevice(req);
+app.get("/api/status", async (req, res) => {
+  const loaded = await loadDevice(req);
   if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
   return res.json({
@@ -602,7 +599,8 @@ app.post("/api/upload-audio", upload.single("audio"), (req, res) => {
 });
 app.post("/api/chat", async (req, res) => {
   try {
-        const loaded = loadDevice(req);
+    const loaded = await loadDevice(req);
+
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const d = loaded.data;
@@ -821,7 +819,8 @@ return res.json({
 // ===== STT: Audio -> Text (Whisper) + Daily-Free Voice / Credits =====
 app.post("/api/stt", upload.single("audio"), async (req, res) => {
   try {
-    const loaded = loadDevice(req);
+    const loaded = await loadDevice(req);
+
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const d = loaded.data;
@@ -898,7 +897,8 @@ if ((d.dailySttUsed || 0) < FREE_STT_PER_DAY) {
 // ===== PAYPAL: Order bestätigen + Credits gutschreiben =====
 app.post("/api/paypal/confirm", async (req, res) => {
   try {
-    const loaded = loadDevice(req);
+    const loaded = await loadDevice(req);
+
     if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
     const { packageId, orderId } = req.body || {};
@@ -956,13 +956,15 @@ app.post("/api/paypal/confirm", async (req, res) => {
 });
 
 // ===== DEV/ADMIN: Reset daily counters for current device =====
-app.post("/api/dev/reset-daily", (req, res) => {
+app.post("/api/dev/reset-daily", async (req, res) => {
+
   const token = String(req.headers["x-admin-token"] || "");
   if (!process.env.ADMIN_RESET_TOKEN || token !== process.env.ADMIN_RESET_TOKEN) {
     return res.status(403).json({ ok: false, error: "FORBIDDEN" });
   }
 
-  const loaded = loadDevice(req);
+  const loaded = await loadDevice(req);
+
   if (!loaded.ok) return res.status(400).json({ ok: false, error: loaded.error });
 
   const d = loaded.data;

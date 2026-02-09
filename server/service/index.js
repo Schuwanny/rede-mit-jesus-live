@@ -546,7 +546,8 @@ if (c === "jesus" || c === "maria" || c === "josef") {
           d.credits -= COST_VOICE;
         }
 
-        saveDevice(loaded.deviceId, d);
+        await saveDevice(loaded.deviceId, d);
+
 
         tts = {
           mime: ttsRes.mime || "audio/mpeg",
@@ -613,7 +614,8 @@ app.post("/api/stt", upload.single("audio"), async (req, res) => {
       d.credits -= COST_VOICE;
     }
 
-    saveDevice(loaded.deviceId, d);
+    await saveDevice(loaded.deviceId, d);
+
 
     if (!req.file) return res.status(400).json({ ok: false, error: "NO_FILE" });
     if (!OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "NO_OPENAI_KEY" });
