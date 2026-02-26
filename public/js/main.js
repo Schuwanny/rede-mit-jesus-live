@@ -684,13 +684,6 @@ onError: (err) => {
   }
 
 }
- 
-
-// ✅ HIER war der Bug: Button wurde nie in die Zeile eingefügt
-donateRow.appendChild(donateBtn);
-
-// ✅ sicherer Mount (ohne "wrap")
-document.getElementById("paypal-packages")?.appendChild(donateRow);
 
   // ===== RENDER =====
 function render() {
