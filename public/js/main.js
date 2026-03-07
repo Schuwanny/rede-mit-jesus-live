@@ -183,6 +183,9 @@ if (donateBtn) {
       clear_chat: "Gespräch löschen",
       clear_chat_confirm: "Möchtest du dieses Gespräch wirklich löschen?",
       clear_chat_done: "Gespräch wurde gelöscht.",
+            copy_answer: "Antwort kopieren",
+      copy_done: "Antwort wurde kopiert.",
+      copy_failed: "Kopieren fehlgeschlagen.",
       legal_responsibility: "Verantwortung",
     },
     en: {
@@ -224,7 +227,10 @@ if (donateBtn) {
       legal_privacy: "Privacy",
       legal_terms: "Terms",
       legal_about: "About",
-      legal_responsibility: "Responsibility"
+      copy_answer: "Copy answer",
+      copy_done: "Answer copied.",
+      copy_failed: "Copy failed.",
+      legal_responsibility: "Responsibility",
     }
   };
 
@@ -1080,12 +1086,25 @@ const subtitle = CHARACTERS[state.character].subtitle;
     // Render messages
     const msgList = document.getElementById("msgList");
     
-    msgList.innerHTML = state.messages.map(m => `
+        msgList.innerHTML = state.messages.map((m, index) => `
       <div class="msg ${m.role === "user" ? "user" : "bot"}">
-        ${escapeHtml(m.text)}
-
+        <div class="msg-text">${escapeHtml(m.text)}</div>
+        ${m.role === "bot" ? `<button class="back-btn copy-msg-btn" data-index="${index}">${t("copy_answer")}</button>` : ""}
       </div>
     `).join("");
+        document.querySelectorAll(".copy-msg-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const index = Number(btn.dataset.index);
+        const text = state.messages[index]?.text || "";
+
+        try {
+          await navigator.clipboard.writeText(text);
+          alert(t("copy_done"));
+        } catch (err) {
+          alert(t("copy_failed"));
+        }
+      });
+    });
     // Auto-Scroll: immer die neuesten Nachrichten sichtbar machen
 requestAnimationFrame(() => {
   const last = msgList.lastElementChild;
