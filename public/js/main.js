@@ -170,7 +170,10 @@ if (donateBtn) {
     home_hint_body_5: "Danach helfen Credits, die laufenden Kosten für Technik und KI zu tragen.",
     home_hint_mic: "Mikrofon:",
     home_hint_mic_text: "Tippe auf das Mikrofon, sprich – und tippe erneut zum Senden.",
-
+    home_steps_title: "So funktioniert's",
+    home_steps_1: "Wähle eine Figur aus.",
+    home_steps_2: "Schreibe oder sprich deine Nachricht.",
+    home_steps_3: "Lies die Antwort oder höre sie dir an.",
 
       system_error_bot: "(Systemfehler beim Bot-Request)",
       mic_denied: "Mikrofon nicht verfügbar oder abgelehnt.",
@@ -219,6 +222,10 @@ if (donateBtn) {
       home_hint_body_5: "After that, credits help cover the ongoing costs for technology and AI.",
       home_hint_mic: "Microphone:",
       home_hint_mic_text: "Hold it and speak freely from your heart.",
+      home_steps_title: "How it works",
+      home_steps_1: "Choose a character.",
+      home_steps_2: "Type or speak your message.",
+      home_steps_3: "Read the answer or listen to it.",
       system_error_bot: "(System error during bot request)",
       mic_denied: "Microphone not available or permission denied.",
       record_stop_failed: "Recording could not be stopped: ",
@@ -814,7 +821,26 @@ function applyHomeHint() {
         <strong>${sanitizeHintText(t("home_hint_mic"))}</strong> ${sanitizeHintText(t("home_hint_mic_text"))}
       </div>
     </div>
+    <div class="home-info" style="
+      max-width:760px;
+      margin:12px auto 0;
+      padding:14px 16px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      backdrop-filter: blur(6px);
+      text-align:left;
+    ">
+      <div style="font-weight:600; margin-bottom:8px; opacity:.95;">
+        ${sanitizeHintText(t("home_steps_title"))}
+      </div>
 
+      <div style="font-size:13px; line-height:1.55; opacity:.88;">
+        1. ${sanitizeHintText(t("home_steps_1"))}<br>
+        2. ${sanitizeHintText(t("home_steps_2"))}<br>
+        3. ${sanitizeHintText(t("home_steps_3"))}
+      </div>
+    </div>
     `;
 
 // ===== Resume-Popup (minimal) =====
