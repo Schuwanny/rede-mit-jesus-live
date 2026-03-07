@@ -129,6 +129,7 @@ async function apiFetch(path, options = {}) {
     // 🔁 Update PayPal donate button text on language switch
 const donateBtn = document.querySelector('#paypal-packages a[href*="paypal.me"]');
 if (donateBtn) {
+  donateBtn.id = "donate-button";
   donateBtn.textContent =
     state.lang === "en"
       ? "🙏 Support Talk with Jesus"
@@ -179,7 +180,10 @@ if (donateBtn) {
       legal_privacy: "Datenschutz",
       legal_terms: "AGB",
       legal_about: "Über die App",
-      legal_responsibility: "Verantwortung"
+      clear_chat: "Gespräch löschen",
+      clear_chat_confirm: "Möchtest du dieses Gespräch wirklich löschen?",
+      clear_chat_done: "Gespräch wurde gelöscht.",
+      legal_responsibility: "Verantwortung",
     },
     en: {
       app_title: "Talk with Jesus",
@@ -1014,7 +1018,7 @@ const subtitle = CHARACTERS[state.character].subtitle;
         app.innerHTML = `
       <div class="chat-top">
                 <button class="back-btn" id="backBtn">${t("back")}</button>
-
+                <button class="back-btn" id="clearChatBtn">${t("clear_chat")}</button>
         <div class="chat-title">
   <div class="chat-avatar">
     <img src="/assets/avatars/${state.character}-avatar.png" alt="${title}" />
@@ -1064,7 +1068,15 @@ const subtitle = CHARACTERS[state.character].subtitle;
       state.messages = [];
       render();
     });
+    document.getElementById("clearChatBtn").addEventListener("click", () => {
+      if (!confirm(t("clear_chat_confirm"))) return;
 
+      clearConversation(state.character, state.lang);
+      state.messages = [];
+      render();
+
+      alert(t("clear_chat_done"));
+    });
     // Render messages
     const msgList = document.getElementById("msgList");
     
