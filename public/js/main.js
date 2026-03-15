@@ -1072,7 +1072,14 @@ const subtitle = CHARACTERS[state.character].subtitle;
 
       <div class="chat-wrap">
         <div class="msg-list" id="msgList"></div>
-
+<div class="situation-buttons" id="situationButtons">
+  <button type="button" class="situation-btn" data-preset="angst">Angst</button>
+  <button type="button" class="situation-btn" data-preset="hoffnung">Hoffnung</button>
+  <button type="button" class="situation-btn" data-preset="liebe">Liebe</button>
+  <button type="button" class="situation-btn" data-preset="entscheidung">Entscheidung</button>
+  <button type="button" class="situation-btn" data-preset="trauer">Trauer</button>
+  <button type="button" class="situation-btn" data-preset="motivation">Motivation</button>
+</div>
         <div class="chat-input">
   <button class="voice-btn" id="voiceBtn">🎙️</button>
     <input id="msgInput" type="text" placeholder="${t("placeholder_write")}" autocomplete="off" />
