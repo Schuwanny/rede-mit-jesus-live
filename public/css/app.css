@@ -1223,3 +1223,59 @@ body.rmj-chat .chat-input{
   background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.18);
 }
+/* =========================================================
+   SITUATION BUTTONS – Chat Presets
+   NUR ANHÄNGEN
+   ========================================================= */
+body.rmj-chat .situation-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  padding:0 0 10px;
+  margin-top:8px;
+}
+
+body.rmj-chat .situation-btn{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.92);
+  border-radius:12px;
+  padding:8px 12px;
+  font-size:14px;
+  line-height:1.2;
+  cursor:pointer;
+  box-shadow:none;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  transition:transform .12s ease, background .12s ease, border-color .12s ease;
+}
+
+body.rmj-chat .situation-btn:hover{
+  background:rgba(255,255,255,.10);
+  border-color:rgba(255,255,255,.16);
+}
+
+body.rmj-chat .situation-btn:active{
+  transform:scale(.98);
+}
+
+body.rmj-chat .situation-btn:focus-visible{
+  outline:none;
+  border-color:rgba(255,255,255,.26);
+  box-shadow:0 0 0 2px rgba(255,255,255,.08);
+}
+
+@media (max-width: 520px){
+  body.rmj-chat .situation-buttons{
+    gap:7px;
+    padding-bottom:8px;
+  }
+
+  body.rmj-chat .situation-btn{
+    font-size:13px;
+    padding:7px 10px;
+    border-radius:10px;
+  }
+}
