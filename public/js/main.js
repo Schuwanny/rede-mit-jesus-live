@@ -1180,7 +1180,26 @@ voiceBtn.disabled = false;
 if (!CHARACTERS[state.character].voiceEnabled) {
   voiceBtn.style.display = "none";
 }
+const situationPresets = {
+  angst: "Jesus, ich habe Angst und brauche Trost. Was möchtest du mir sagen?",
+  hoffnung: "Jesus, ich brauche Hoffnung. Bitte gib mir Mut und Orientierung.",
+  liebe: "Jesus, was möchtest du mir über Liebe und Beziehungen sagen?",
+  entscheidung: "Jesus, ich stehe vor einer wichtigen Entscheidung. Bitte hilf mir.",
+  trauer: "Jesus, ich bin traurig und fühle mich belastet. Bitte sprich zu mir.",
+  motivation: "Jesus, ich brauche neue Kraft und Motivation. Was möchtest du mir sagen?"
+};
 
+document.querySelectorAll(".situation-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const preset = situationPresets[btn.dataset.preset];
+    if (!preset) return;
+
+    input.value = preset;
+    sendBtn.disabled = input.value.trim().length === 0;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+});
   input.addEventListener("input", () => {
   // Text nicht clientseitig blocken – serverseitig entscheidet /api/chat
   sendBtn.disabled = input.value.trim().length === 0;
