@@ -189,6 +189,8 @@ if (donateBtn) {
             copy_answer: "Antwort kopieren",
       copy_done: "Antwort wurde kopiert.",
       copy_failed: "Kopieren fehlgeschlagen.",
+      share_answer: "Antwort teilen",
+      share_failed: "Teilen nicht verfügbar.",
       legal_responsibility: "Verantwortung",
     },
     en: {
@@ -237,6 +239,8 @@ if (donateBtn) {
       copy_answer: "Copy answer",
       copy_done: "Answer copied.",
       copy_failed: "Copy failed.",
+      share_answer: "Share answer",
+      share_failed: "Sharing not available.",
       legal_responsibility: "Responsibility",
     }
   };
