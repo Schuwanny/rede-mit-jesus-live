@@ -1154,6 +1154,20 @@ document.querySelectorAll(".share-msg-btn").forEach(btn => {
     const text = state.messages[index]?.text || "";
 
     try {
+      const isNative =
+        window.Capacitor &&
+        typeof window.Capacitor.isNativePlatform === "function" &&
+        window.Capacitor.isNativePlatform();
+
+      if (isNative && window.Capacitor?.Plugins?.Share?.share) {
+        await window.Capacitor.Plugins.Share.share({
+          title: "Rede mit Jesus",
+          text,
+          dialogTitle: t("share_answer"),
+        });
+        return;
+      }
+
       if (!navigator.share) throw new Error("share-not-supported");
       await navigator.share({ text });
     } catch (err) {
